@@ -106,4 +106,6 @@ pub struct Sample {
     pub status: String,
     #[serde(rename = "Name")]
     pub name: String,
+    #[serde(rename = "ExperimentName")]
+    pub experiment_name: Option<String>
 }

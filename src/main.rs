@@ -8,7 +8,7 @@ use exitfailure::ExitFailure;
 
 fn main() -> Result<(), ExitFailure> {
     let matches = App::new("basespace-dl")
-        .version("0.1.0")
+        .version("0.1.1")
         .author("dweb0")
         .about("Download files from multiple basespace accounts.")
         .args(&[
@@ -39,6 +39,12 @@ fn main() -> Result<(), ExitFailure> {
                 .takes_value(true)
                 .possible_values(&["name", "size-smallest", "size-biggest"])
                 .help("Sort files by attribute"),
+            Arg::with_name("undetermined")
+                .long("undetermined")
+                .short("U")
+                .required(false)
+                .takes_value(false)
+                .help("Fetch undetermined files (and download if desired)")
         ])
         .get_matches();
 
@@ -69,6 +75,10 @@ fn main() -> Result<(), ExitFailure> {
             if let Some(pattern) = matches.value_of("pattern") {
                 let re = Regex::new(pattern)?;
                 filter_samples(&mut samples, &re);
+            }
+            if matches.is_present("undetermined") {
+                let undetermined_sample = multi.get_undetermined_sample(&project)?;
+                samples.push(undetermined_sample);
             }
             let mut files = multi.get_files_from_samples(samples, &project)?;
             if let Some(v) = matches.value_of("sort-by") {

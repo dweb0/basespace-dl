@@ -1,0 +1,7 @@
+# 0.1.1  (2019-06-12)
+
+* Added support for Undetermined files with `-U` flag
+
+# 0.1.0  (2019-06-11)
+
+* First release

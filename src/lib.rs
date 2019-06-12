@@ -194,6 +194,8 @@ impl MultiApi {
 
         tokio::run(work);
 
+        // Warning: duplicate project names??
+
         while let Ok(project) = rx.recv() {
             if print_all {
                 println!("{}", project.name);
@@ -204,8 +206,56 @@ impl MultiApi {
 
         None
     }
-}
 
+    pub fn get_undetermined_sample(&self, project: &Project) -> Result<Sample, failure::Error> {
+
+        let token = self.get_token(&project);
+        let client = reqwest::Client::new();
+
+        let resp: ProjectResponse = client
+            .get(&format!(
+                "{}/users/current/projects?limit={}", BASESPACE_URL, RESPONSE_LIMIT
+            ))
+            .header("x-access-token", HeaderValue::from_str(&token)?)
+            .send()?
+            .json()?;
+
+        let projects = resp.projects();
+        let unindexed_project = projects.into_iter().find(|x| x.name == "Unindexed Reads");
+        let unindexed_project = match unindexed_project {
+            Some(p) => p,
+            None => {
+                bail!("Could not find Unindexed Reads in basespace account");
+            }
+        };
+
+        let samples = self.get_samples_by_project(&unindexed_project)?;
+        let undetermined_sample = samples.into_iter().find(|x| {
+            match &x.experiment_name {
+                Some(experiment_name) => {
+                    if experiment_name == &project.name {
+                        return true;
+                    }
+                    else {
+                        return false;
+                    }
+                },
+                None => {
+                    return false;
+                }
+            }
+        });
+        match undetermined_sample {
+            Some(s) => {
+                return Ok(s)
+            },
+            None => {
+                bail!("Could not find Undetermined sample for project {}", &project.name);
+            }
+        };
+
+    }
+}
 
 pub fn get_user_from_token(token: &str) -> Result<String, failure::Error> {
 

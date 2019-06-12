@@ -1,8 +1,13 @@
 # 🌋 `basespace-dl`
 
-Download files from projects accross multiple basespace accounts. Only download what you need (using regex patterns).
+Download files from projects accross multiple basespace accounts.
 
 [![Build Status](https://travis-ci.com/dweb0/basespace-dl.svg?token=EQz1tk6xqYMBC8vjUmyv&branch=master)](https://travis-ci.com/dweb0/basespace-dl)
+
+## Features
+* Easy syntax `basespace-dl PROJECT`
+* Only download what you need (using regex patterns)
+* Support for Undetermined files (can be a pain to find manually)
 
 ## Examples
 
@@ -16,6 +21,12 @@ Download files that match a [regex](https://docs.rs/regex) pattern
 
 ```bash
 basespace-dl project17890 -p "(A01|B02|F10)"
+```
+
+Include Undetermined files
+
+```bash
+basespace-dl project17890 -U
 ```
 
 List files from a specific project
