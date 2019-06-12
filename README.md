@@ -32,6 +32,16 @@ Via Homebrew or Linuxbrew
 brew install dweb0/basespace-dl
 ```
 
+Pre-built binaries
+
+```bash
+# For mac users
+wget "https://github.com/dweb0/basespace-dl/releases/download/0.1.0/basespace-dl-0.1.0-x86_64-apple-darwin.zip"
+
+# For linux users
+wget "https://github.com/dweb0/basespace-dl/releases/download/0.1.0/basespace-dl-0.1.0-x86_64-linux.zip"
+```
+
 From source
 
 ```bash
