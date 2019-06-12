@@ -64,24 +64,33 @@ After installation, you will need to set up your config file. The format is a si
 
 To link an account, we need to retrieve two things: the access token and its respective userID.
 
-First, retrieve an access token. Go to the [developer dashboard](https://developer.basespace.illumina.com/dashboard). Create a new app. Then, navigate to the "Credentials" tab, and copy the "Access Token" (the client id and secret are not needed).
+### Getting access token
 
-Once you have your token, run this command and look for the ID field. It should be an integer (e.g. 123480).
+1. Go to the [developer dashboard](https://developer.basespace.illumina.com/dashboard). 
+2. Create a new app. 
+3. Navigate to the "Credentials" tab, and copy the "Access Token".
+
+### Getting user ID
+
+Now that you have your token, we can run a curl command to get your user ID. Look for the "Id" field
+in the output
 
 ```bash
 TOKEN="STORE_YOUR_TOKEN_HERE"
 curl "https://api.basespace.illumina.com/v1pre3/users/current/" -H "x-access-token: $TOKEN" | python -m json.tool
 ```
 
-Add the "userID = access_token" pair to the config file. Do this for each account you would like to link.
+### Final steps
 
-Go ahead and set the file permissions as readable / writeable by you only.
+Add the "user_id = access_token" pair to the config file. Do this for each account you would like to link.
+
+Note: It's a good idea to set the file permissions as readable / writeable by only you.
 
 ```bash
 chmod 600 $HOME/.config/basespace-dl/default.toml
 ```
 
-The hardest part is over!
+Now you're ready to go!
 
 ## Acknowledgements
 
