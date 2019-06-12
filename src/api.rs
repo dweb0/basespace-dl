@@ -27,6 +27,24 @@ pub struct Project {
 }
 
 #[derive(Deserialize, Debug)]
+pub struct CurrentUserResponse {
+    #[serde(rename = "Response")]
+    response: CurrentUserResponseB
+}
+
+impl CurrentUserResponse {
+    pub fn user_id(&self) -> &str {
+        &self.response.id
+    }
+}
+
+#[derive(Deserialize, Debug)]
+struct CurrentUserResponseB {
+    #[serde(rename = "Id")]
+    id: String
+}
+
+#[derive(Deserialize, Debug)]
 pub struct User {
     #[serde(rename = "Name")]
     pub name: String,

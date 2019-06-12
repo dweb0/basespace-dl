@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::collections::HashMap;
 use crate::MultiApi;
@@ -25,12 +25,24 @@ impl Workspace {
         Ok(Workspace { config_file })
     }
 
-    pub fn accounts(&self) -> Result<HashMap<String, String>, failure::Error> {
+    fn accounts(&self) -> Result<HashMap<String, String>, failure::Error> {
         let mut file = File::open(&self.config_file)?;
         let mut buffer = String::new();
         file.read_to_string(&mut buffer)?;
         let accounts: HashMap<String, String> = toml::from_str(&buffer)?;
         Ok(accounts)
+    }
+
+    pub fn add_account(&self, user_id: &str, token: &str) -> Result<(), failure::Error> {
+        let mut accounts = self.accounts()?;
+        let inserted = accounts.insert(user_id.to_owned(), token.to_owned());
+        if inserted.is_some() {
+            bail!("User {} is already in config file.", user_id);
+        }
+        let buffer = toml::to_string(&accounts)?;
+        let mut file = File::create(&self.config_file)?;
+        write!(&mut file, "{}", buffer)?;
+        Ok(())
     }
 
     pub fn to_multiapi(self) -> Result<MultiApi, failure::Error> {

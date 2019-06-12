@@ -4,8 +4,7 @@ use regex::Regex;
 
 use std::cmp::Reverse;
 use std::path::PathBuf;
-mod pretty_err;
-use pretty_err::ExitFailure;
+use exitfailure::ExitFailure;
 
 fn main() -> Result<(), ExitFailure> {
     let matches = App::new("basespace-dl")
@@ -17,7 +16,7 @@ fn main() -> Result<(), ExitFailure> {
                 .index(1)
                 .required(true)
                 .takes_value(true)
-                .help("Project name (e.g. 1901-iR-0029). Use ALL to print all projects"),
+                .help("Project name (e.g. project17890). Use ALL to print all projects"),
             Arg::with_name("list-files")
                 .long("list-files")
                 .short("F")
@@ -96,7 +95,7 @@ fn main() -> Result<(), ExitFailure> {
         }
         None => {
             if !print_all {
-                eprintln!("Could not find project {}", query);
+                eprintln!("Error: Could not find project {}", query);
             }
         }
     }

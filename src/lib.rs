@@ -18,7 +18,6 @@ use indicatif::ProgressBar;
 use console::style;
 
 pub mod api;
-pub mod shell;
 pub mod workspace;
 
 use api::*;
@@ -205,4 +204,22 @@ impl MultiApi {
 
         None
     }
+}
+
+
+pub fn get_user_from_token(token: &str) -> Result<String, failure::Error> {
+
+    let client = reqwest::Client::new();
+
+    let response: CurrentUserResponse = client
+        .get(&format!(
+            "{}/users/current",
+            BASESPACE_URL
+        ))
+        .header("x-access-token", token)
+        .send()?
+        .json()?;
+
+    let user_id = response.user_id().to_owned();
+    Ok(user_id)
 }

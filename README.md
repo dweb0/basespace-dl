@@ -18,10 +18,16 @@ Download files that match a [regex](https://docs.rs/regex) pattern
 basespace-dl project17890 -p "(A01|B02|F10)"
 ```
 
-List (do not download) files from project
+List files from a specific project
 
 ```bash
 basespace-dl project17890 -F
+```
+
+List ALL projects
+
+```bash
+basespace-dl ALL
 ```
 
 ## Installation
@@ -53,7 +59,7 @@ mv target/release/basespace-dl /usr/local/bin   #optional
 
 ## Getting started
 
-After installation, you will need to set up your config file. The format is a simple key-value [toml](https://github.com/toml-lang/toml) stored in $HOME/.config/basespace-dl/default.toml. 
+After installation, you will need to set up your config file. The format is a simple key-value [toml](https://github.com/toml-lang/toml) stored in ~/.config/basespace-dl/default.toml. 
 
 ```toml
 # UserID = "access_token"
@@ -87,7 +93,7 @@ Add the "user_id = access_token" pair to the config file. Do this for each accou
 Note: It's a good idea to set the file permissions as readable / writeable by only you.
 
 ```bash
-chmod 600 $HOME/.config/basespace-dl/default.toml
+chmod 600 ~/.config/basespace-dl/default.toml
 ```
 
 Now you're ready to go!
