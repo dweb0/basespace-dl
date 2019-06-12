@@ -29,7 +29,7 @@ basespace-dl project17890 -F
 Via Homebrew or Linuxbrew
 
 ```bash
-brew install dweb0/basespace-dl
+brew install dweb0/releases/basespace-dl
 ```
 
 Pre-built binaries
