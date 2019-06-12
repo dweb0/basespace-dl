@@ -1,9 +1,8 @@
 # 🌋 `basespace-dl`
 
-Download files from projects accross multiple basespace accounts. Regex patterns allow select file download.
+Download files from projects accross multiple basespace accounts. Only download what you need (using regex patterns).
 
 [![Build Status](https://travis-ci.com/dweb0/basespace-dl.svg?token=EQz1tk6xqYMBC8vjUmyv&branch=master)](https://travis-ci.com/dweb0/basespace-dl)
-
 
 ## Examples
 
