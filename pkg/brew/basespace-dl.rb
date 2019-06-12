@@ -1,13 +1,13 @@
 class BasespaceDl < Formula
-    version = '0.1.0'
+    version = '0.1.1'
     desc = 'Multi-account basespace file downloader'
 
     if OS.mac?
         url "https://github.com/dweb0/basespace-dl/releases/download/#{version}/basespace-dl-#{version}-x86_64-apple-darwin.zip"
-        sha256 "6ac17907f83ec9243c48533c1d547ae993a64aca625ed106d45fc8d615e55370"
+        sha256 "2a4c926263001d63281821d7a1c34091df901ac70febadcf9f35f15a478ae75a"
     elsif OS.linux?
         url "https://github.com/dweb0/basespace-dl/releases/download/#{version}/basespace-dl-#{version}-x86_64-linux.zip"
-        sha256 "bc32278133b7dc30192ac4171a369767e49ad50a0987e12cc9c0915fbd5194ec"
+        sha256 "d597b7e71404a57d1f9de4c15c4dd798e3f3de2dfb429068362be1274bcfaff9"
     end
 
     def install
