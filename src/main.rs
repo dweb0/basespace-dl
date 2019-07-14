@@ -1,16 +1,15 @@
 use basespace_dl::{self, api::Sample, workspace::Workspace};
 use clap::{App, Arg};
+use console::style;
 use regex::Regex;
-
 use std::cmp::Reverse;
 use std::path::PathBuf;
-use exitfailure::ExitFailure;
 
-fn main() -> Result<(), ExitFailure> {
+fn main() {
     let matches = App::new("basespace-dl")
-        .version("0.1.1")
+        .version(env!("CARGO_PKG_VERSION"))
         .author("dweb0")
-        .about("Download files from multiple basespace accounts.")
+        .about("Multi-account basespace file downloader")
         .args(&[
             Arg::with_name("project")
                 .index(1)
@@ -44,17 +43,43 @@ fn main() -> Result<(), ExitFailure> {
                 .short("U")
                 .required(false)
                 .takes_value(false)
-                .help("Fetch undetermined files (and download if desired)")
+                .help("Fetch undetermined files as well"),
         ])
         .get_matches();
 
-    let multi = Workspace::new()?.to_multiapi()?;
+    let ws = match Workspace::new() {
+        Ok(ws) => ws,
+        Err(e) => {
+            eprintln!(
+                "{} Could not generate workspace. {}",
+                style(&format!("error:")).bold().red(),
+                e
+            );
+            std::process::exit(1);
+        }
+    };
+
+    let multi = match ws.to_multiapi() {
+        Ok(multi) => multi,
+        Err(e) => {
+            eprintln!(
+                "{} Could not generate multi-api from workspace. {}",
+                style(&format!("error:")).bold().red(),
+                e
+            );
+            std::process::exit(1);
+        }
+    };
 
     let directory = match matches.value_of("directory") {
         Some(dir) => {
             let path_dir = PathBuf::from(dir);
             if !path_dir.is_dir() {
-                eprintln!("Error: {} is not a valid directory.", dir);
+                eprintln!(
+                    "{} {} is not a valid directory.",
+                    style(&format!("error:")).bold().red(),
+                    dir
+                );
                 std::process::exit(1);
             }
             path_dir
@@ -69,53 +94,102 @@ fn main() -> Result<(), ExitFailure> {
     };
 
     let project = multi.find_project(matches.value_of("project").unwrap(), print_all);
-    match project {
-        Some(project) => {
-            let mut samples = multi.get_samples_by_project(&project)?;
-            if let Some(pattern) = matches.value_of("pattern") {
-                let re = Regex::new(pattern)?;
-                filter_samples(&mut samples, &re);
-            }
-            if matches.is_present("undetermined") {
-                let undetermined_sample = multi.get_undetermined_sample(&project)?;
-                samples.push(undetermined_sample);
-            }
-            let mut files = multi.get_files_from_samples(samples, &project)?;
-            if let Some(v) = matches.value_of("sort-by") {
-                match v {
-                    "name" => {
-                        files.sort_unstable_by_key(|file| file.name.to_owned());
-                    }
-                    "size-smallest" => {
-                        files.sort_unstable_by_key(|file| file.size);
-                    }
-                    "size-biggest" => {
-                        files.sort_unstable_by_key(|file| Reverse(file.size));
-                    }
-                    _ => panic!("Invalid sort-by arg. This should be unreachable"),
-                };
-            }
-            if matches.is_present("list-files") {
-                for file in files {
-                    println!("{}", file.name);
-                }
-            } else {
-                multi.download_files(files, &project, directory)?;
-            }
-        }
+
+    let project = match project {
+        Some(project) => project,
         None => {
-            if !print_all {
-                eprintln!("Error: Could not find project {}", query);
+            if print_all {
+                std::process::exit(0);
+            }
+            eprintln!(
+                "{} Could not find project {}.",
+                style(&format!("error:")).bold().red(),
+                query
+            );
+            std::process::exit(1);
+        }
+    };
+
+    let mut samples = match multi.get_samples_by_project(&project) {
+        Ok(samples) => samples,
+        Err(e) => {
+            eprintln!("{} {}", style(&format!("error:")).bold().red(), e);
+            std::process::exit(1);
+        }
+    };
+
+    if let Some(pattern) = matches.value_of("pattern") {
+        let re = match Regex::new(pattern) {
+            Ok(re) => re,
+            Err(e) => {
+                eprintln!(
+                    "{} Invalid regex pattern. {}",
+                    style(&format!("error:")).bold().red(),
+                    e
+                );
+                std::process::exit(1);
+            }
+        };
+        filter_samples(&mut samples, &re);
+    }
+    if matches.is_present("undetermined") {
+        let undetermined_sample = match multi.get_undetermined_sample(&project) {
+            Ok(sample) => sample,
+            Err(e) => {
+                eprintln!(
+                    "{} Could not get undetermined sample. {}",
+                    style(&format!("error:")).bold().red(),
+                    e
+                );
+                std::process::exit(1);
+            }
+        };
+        samples.push(undetermined_sample);
+    }
+
+    let mut files = match multi.get_files_from_samples(samples, &project) {
+        Ok(files) => files,
+        Err(e) => {
+            eprintln!("{} {}", style(&format!("error:")).bold().red(), e);
+            std::process::exit(1);
+        }
+    };
+
+    if let Some(v) = matches.value_of("sort-by") {
+        match v {
+            "name" => {
+                files.sort_unstable_by_key(|file| file.name.to_owned());
+            }
+            "size-smallest" => {
+                files.sort_unstable_by_key(|file| file.size);
+            }
+            "size-biggest" => {
+                files.sort_unstable_by_key(|file| Reverse(file.size));
+            }
+            _ => unreachable!(),
+        };
+    }
+    if matches.is_present("list-files") {
+        for file in files {
+            println!("{}", file.name);
+        }
+    } else {
+        match multi.download_files(files, &project, directory) {
+            Ok(_) => (),
+            Err(e) => {
+                eprintln!(
+                    "{} Could not download files. {}",
+                    style(&format!("error:")).bold().red(),
+                    e
+                );
+                std::process::exit(1);
             }
         }
     }
-
-    Ok(())
 }
 
 // TODO: Replace with drain_filter when it becomes stable
 fn filter_samples(samples: &mut Vec<Sample>, re: &Regex) {
-
     let mut i = 0;
     while i != samples.len() {
         let sample = &mut samples[i];

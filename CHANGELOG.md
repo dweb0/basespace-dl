@@ -1,7 +1,14 @@
 # TODO
 
 * Check etags to ensure file downloaded correctly
-* Check if project name exists in multiple accounts (prompt user to choose)
+* Shared projects?
+
+# 0.1.2  (2019-07-13)
+
+* Added user prompt if the project has duplicates (user needs to pick desired project) 
+* Fixed freezing bug when fetching files when samples is empty
+* Now handles errors manually in main (with colored output)
+* Added package into in Cargo.toml
 
 # 0.1.1  (2019-06-12)
 

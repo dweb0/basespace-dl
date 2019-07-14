@@ -1,8 +1,22 @@
 [package]
 name = "basespace-dl"
-version = "0.1.1"
-authors = ["daniel"]
+version = "0.1.2"
+authors = ["dweb0"]
+description = "Multi-account basespace file downloader"
+homepage = "https://github.com/dweb0/basespace-dl"
+repository = "https://github.com/dweb0/basespace-dl"
+readme = "README.md"
+keywords = ["bioinformatics", "download", "downloader", "basespace"]
+categories = ["command-line-interface"]
+license = "MIT/Apache-2.0"
 edition = "2018"
+
+[badges]
+travis-ci = { repository = "dweb0/basespace-dl" }
+
+[[bin]]
+name = "basespace-dl"
+path = "src/main.rs"
 
 [dependencies]
 reqwest = "*"
@@ -22,4 +36,4 @@ pretty-bytes = "*"
 failure = "*"
 indicatif = "*"
 console = "*"
-exitfailure = "*"
+text_io = "0.1.7"

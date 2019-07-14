@@ -24,12 +24,14 @@ pub struct Project {
     pub id: String,
     #[serde(rename = "UserOwnedBy")]
     pub user_owned_by: User,
+    #[serde(rename = "DateCreated")]
+    pub date_created: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct CurrentUserResponse {
     #[serde(rename = "Response")]
-    response: CurrentUserResponseB
+    response: CurrentUserResponseB,
 }
 
 impl CurrentUserResponse {
@@ -41,7 +43,7 @@ impl CurrentUserResponse {
 #[derive(Deserialize, Debug)]
 struct CurrentUserResponseB {
     #[serde(rename = "Id")]
-    id: String
+    id: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -107,5 +109,5 @@ pub struct Sample {
     #[serde(rename = "Name")]
     pub name: String,
     #[serde(rename = "ExperimentName")]
-    pub experiment_name: Option<String>
+    pub experiment_name: Option<String>,
 }

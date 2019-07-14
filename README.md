@@ -1,4 +1,4 @@
-# 🌋 `basespace-dl`
+# `basespace-dl`
 
 Download files from projects accross multiple basespace accounts.
 
@@ -6,6 +6,7 @@ Download files from projects accross multiple basespace accounts.
 
 ## Features
 * Easy syntax `basespace-dl PROJECT`
+* Multi account (one time config file setup)
 * Only download what you need (using regex patterns)
 * Support for Undetermined files (can be a pain to find manually)
 

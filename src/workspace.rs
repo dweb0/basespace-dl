@@ -1,8 +1,8 @@
+use crate::MultiApi;
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::collections::HashMap;
-use crate::MultiApi;
 
 pub struct Workspace {
     pub config_file: PathBuf,
@@ -10,7 +10,6 @@ pub struct Workspace {
 
 impl Workspace {
     pub fn new() -> Result<Workspace, failure::Error> {
-
         let home = dirs::home_dir().expect("Could not locate $HOME.");
         let config_dir = home.join(".config/basespace-dl");
         if !config_dir.is_dir() {
@@ -50,7 +49,10 @@ impl Workspace {
 
         ensure!(
             accounts.keys().count() > 0,
-            format_err!("{} is empty. Please add token(s).", self.config_file.to_str().unwrap())
+            format_err!(
+                "{} is empty. Please add token(s).",
+                self.config_file.to_str().unwrap()
+            )
         );
 
         Ok(MultiApi::new(self.accounts()?))

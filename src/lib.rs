@@ -2,20 +2,22 @@
 extern crate serde_derive;
 #[macro_use]
 extern crate failure;
+#[macro_use]
+extern crate text_io;
 
 use crossbeam_channel::unbounded;
 use futures::{stream, Future, Stream};
 use pretty_bytes::converter::convert as convert_bytes;
 
-use std::collections::HashMap;
+use console::style;
+use indicatif::ProgressBar;
 use reqwest::header::HeaderValue;
 use reqwest::r#async::Client;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufWriter;
 use std::io::{Read, Write};
 use std::path::Path;
-use indicatif::ProgressBar;
-use console::style;
 
 pub mod api;
 pub mod workspace;
@@ -60,13 +62,12 @@ impl MultiApi {
             .into_iter()
             .partition(|s| s.status == "Complete");
 
-        ensure!(
-            unfinished.is_empty(),
-            format_err!(
+        if !unfinished.is_empty() {
+            bail!(
                 "Project not finished yet. {} samples still processing",
                 unfinished.len()
-            )
-        );
+            );
+        }
 
         Ok(finished)
     }
@@ -87,7 +88,9 @@ impl MultiApi {
         for (index, file) in files.into_iter().enumerate() {
             eprintln!(
                 "{} {} : {}",
-                style(&format!("[{}/{}]", index + 1, num_files)).bold().dim(),
+                style(&format!("[{}/{}]", index + 1, num_files))
+                    .bold()
+                    .dim(),
                 &file.name,
                 convert_bytes(file.size as f64)
             );
@@ -126,10 +129,21 @@ impl MultiApi {
         samples: Vec<Sample>,
         project: &Project,
     ) -> Result<Vec<DataFile>, failure::Error> {
-        let token = self.get_token(&project);
+        if samples.is_empty() {
+            bail!("No samples for {}", project.name);
+        }
 
+        let token = self.get_token(&project);
         let client = Client::new();
-        let (tx, rx) = unbounded();
+        let (tx, rx) = unbounded::<DataFile>();
+
+        let catcher = std::thread::spawn(move || {
+            let mut files = vec![];
+            while let Ok(file) = rx.recv() {
+                files.push(file);
+            }
+            files
+        });
 
         let sample_len = samples.len();
         let bodies = stream::iter_ok(samples)
@@ -153,18 +167,73 @@ impl MultiApi {
             .map_err(|_e| panic!("Error"));
 
         tokio::run(work);
-
-        let mut files = vec![];
-        while let Ok(file) = rx.recv() {
-            files.push(file);
-        }
-
-        Ok(files)
+        Ok(catcher.join().unwrap())
     }
 
     pub fn find_project(&self, query_project: &str, print_all: bool) -> Option<Project> {
-        let (tx, rx) = unbounded();
+        let (tx, rx) = unbounded::<Project>();
         let client = Client::new();
+
+        let query_project = query_project.to_owned();
+        let catcher = std::thread::spawn(move || {
+            let mut found_projects = vec![];
+            while let Ok(project) = rx.recv() {
+                if print_all {
+                    println!("{}", project.name);
+                } else if project.name == query_project {
+                    found_projects.push(project);
+                }
+            }
+            if found_projects.len() == 1 {
+                Some(found_projects.remove(0))
+            } else if found_projects.len() == 0 {
+                None
+            } else {
+                eprintln!(
+                    "{} Found {} projects with the same name.",
+                    style(&format!("warning:")).bold().yellow(),
+                    found_projects.len()
+                );
+
+                for (index, project) in found_projects.iter().enumerate() {
+                    eprintln!(
+                        "{}: name = \"{}\", dateCreated = \"{}\"",
+                        index, project.user_owned_by.name, project.date_created
+                    );
+                }
+
+                let user_index = loop {
+                    eprint!(
+                        "Enter the project index [0..{}]: ",
+                        found_projects.len() - 1
+                    );
+                    let response: Result<usize, _> = try_read!();
+                    let response = match response {
+                        Ok(response) => {
+                            if response > found_projects.len() - 1 {
+                                eprintln!(
+                                    "{} Please enter an integer from 0 to {}",
+                                    style(&format!("error:")).bold().red(),
+                                    found_projects.len() - 1
+                                );
+                                continue;
+                            }
+                            response
+                        }
+                        Err(_) => {
+                            eprintln!(
+                                "{} Please enter an integer from 0 to {}",
+                                style(&format!("error:")).bold().red(),
+                                found_projects.len() - 1
+                            );
+                            continue;
+                        }
+                    };
+                    break response;
+                };
+                Some(found_projects.remove(user_index))
+            }
+        });
 
         let tokens: Vec<String> = self.accounts.iter().map(|(_k, v)| v.to_owned()).collect();
         let token_len = tokens.len();
@@ -193,28 +262,17 @@ impl MultiApi {
             .map_err(|_e| panic!("Error"));
 
         tokio::run(work);
-
-        // Warning: duplicate project names??
-
-        while let Ok(project) = rx.recv() {
-            if print_all {
-                println!("{}", project.name);
-            } else if project.name == query_project {
-                return Some(project);
-            }
-        }
-
-        None
+        catcher.join().unwrap()
     }
 
     pub fn get_undetermined_sample(&self, project: &Project) -> Result<Sample, failure::Error> {
-
         let token = self.get_token(&project);
         let client = reqwest::Client::new();
 
         let resp: ProjectResponse = client
             .get(&format!(
-                "{}/users/current/projects?limit={}", BASESPACE_URL, RESPONSE_LIMIT
+                "{}/users/current/projects?limit={}",
+                BASESPACE_URL, RESPONSE_LIMIT
             ))
             .header("x-access-token", HeaderValue::from_str(&token)?)
             .send()?
@@ -230,42 +288,35 @@ impl MultiApi {
         };
 
         let samples = self.get_samples_by_project(&unindexed_project)?;
-        let undetermined_sample = samples.into_iter().find(|x| {
-            match &x.experiment_name {
-                Some(experiment_name) => {
-                    if experiment_name == &project.name {
-                        return true;
-                    }
-                    else {
-                        return false;
-                    }
-                },
-                None => {
+        let undetermined_sample = samples.into_iter().find(|x| match &x.experiment_name {
+            Some(experiment_name) => {
+                if experiment_name == &project.name {
+                    return true;
+                } else {
                     return false;
                 }
             }
+            None => {
+                return false;
+            }
         });
         match undetermined_sample {
-            Some(s) => {
-                return Ok(s)
-            },
+            Some(s) => return Ok(s),
             None => {
-                bail!("Could not find Undetermined sample for project {}", &project.name);
+                bail!(
+                    "Could not find Undetermined sample for project {}",
+                    &project.name
+                );
             }
         };
-
     }
 }
 
 pub fn get_user_from_token(token: &str) -> Result<String, failure::Error> {
-
     let client = reqwest::Client::new();
 
     let response: CurrentUserResponse = client
-        .get(&format!(
-            "{}/users/current",
-            BASESPACE_URL
-        ))
+        .get(&format!("{}/users/current", BASESPACE_URL))
         .header("x-access-token", token)
         .send()?
         .json()?;
