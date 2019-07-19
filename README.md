@@ -44,6 +44,12 @@ basespace-dl ALL
 
 ## Installation
 
+Via [cargo](https://www.rust-lang.org/tools/install) (Recommended, always up to date)
+
+```
+cargo install --git https://github.com/dweb0/basespace-dl
+```
+
 Via Homebrew or Linuxbrew
 
 ```bash
@@ -58,15 +64,6 @@ wget "https://github.com/dweb0/basespace-dl/releases/download/0.1.1/basespace-dl
 
 # For linux users
 wget "https://github.com/dweb0/basespace-dl/releases/download/0.1.1/basespace-dl-0.1.1-x86_64-linux.zip"
-```
-
-From source
-
-```bash
-git clone https://github.com/dweb0/basespace-dl
-cd basespace-dl
-cargo build --release
-mv target/release/basespace-dl /usr/local/bin   #optional
 ```
 
 ## Getting started
