@@ -68,7 +68,7 @@ wget "https://github.com/dweb0/basespace-dl/releases/download/0.1.1/basespace-dl
 
 ## Getting started
 
-After installation, you will need to set up your config file. The format is a simple key-value [toml](https://github.com/toml-lang/toml) stored in ~/.config/basespace-dl/default.toml. 
+After installation, you will need to set up your config file. The format is a simple [key-value toml](https://github.com/toml-lang/toml#user-content-keyvalue-pair) stored in ~/.config/basespace-dl/default.toml. 
 
 ```toml
 # UserID = "access_token"
