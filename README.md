@@ -6,8 +6,8 @@ Download files from projects accross multiple basespace accounts.
 
 ## Features
 * Easy syntax `basespace-dl PROJECT`
-* Concurrent
-* Multiple accounts (just setup a config file once)
+* Multiple accounts (one time config file setup)
+* Fast (concurrent fetching and downloading)
 * Only download what you need (using regex patterns)
 
 ## Examples
@@ -75,7 +75,7 @@ To link an account, we need to retrieve two things: the access token and its res
 ### Getting user ID
 
 Now that you have your token, we can run a curl command to get your user ID. Look for the "Id" field
-in the output
+in the output.
 
 ```bash
 TOKEN="STORE_YOUR_TOKEN_HERE"
@@ -99,3 +99,4 @@ Now you're ready to go!
 ## Acknowledgements
 
 Special thanks to the developers of the all the libraries in Cargo.toml, as well as [Shepmaster](https://stackoverflow.com/users/155423/shepmaster) for help with tokio.
+

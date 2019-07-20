@@ -1,7 +1,12 @@
 # TODO
 
 * Check etags to ensure file downloaded correctly
-* Shared projects?
+
+# 0.2.1  (2019-07-21)
+
+* Can now download projects not owned by self (e.g. shared projects or publicly available datasets linked to your account)
+* Better logging (added verbose option)
+* Added build scripts to cross compile
 
 # 0.2.0  (2019-07-20)
 

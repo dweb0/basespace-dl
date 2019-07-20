@@ -6,6 +6,7 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
+use log::info;
 
 fn main() {
     let matches = App::new("basespace-dl")
@@ -51,8 +52,18 @@ fn main() {
                 .required(false)
                 .takes_value(false)
                 .help("Fetch undetermined files as well"),
+            Arg::with_name("verbose")
+                .long("verbose")
+                .short("v")
+                .required(false)
+                .help("Print status messages")
         ])
         .get_matches();
+
+    if matches.is_present("verbose") {
+        std::env::set_var("RUST_LOG", "info");
+    }
+    env_logger::init();
 
     let ws = match Workspace::new() {
         Ok(ws) => ws,
@@ -87,15 +98,8 @@ fn main() {
         "ALL" => true,
         _ => false,
     };
-    let list_files = matches.is_present("list-files");
 
-    // It gets annoying if you are just listing files
-    // and we also print these messages
-    // From now on, we will only print log messages
-    // if user is actually downloading files
-    if !(print_all || list_files) {
-        eprintln!("Searching for project...");
-    }
+    info!("Searching for project...");
 
     let project = multi.find_project(matches.value_of("project").unwrap(), print_all);
 
@@ -109,10 +113,7 @@ fn main() {
         }
     };
 
-
-    if !list_files {
-        eprintln!("Fetching samples...");
-    }
+    info!("Fetching samples...");
     
     let mut samples = match multi.get_samples_by_project(&project) {
         Ok(samples) => samples,
@@ -131,9 +132,7 @@ fn main() {
         samples.push(undetermined_sample);
     }
 
-    if !list_files {
-        eprintln!("Locating files...");
-    }    
+    info!("Locating files...");    
 
     let mut files = match multi.get_files_from_samples(samples, &project) {
         Ok(files) => files,
@@ -198,6 +197,7 @@ fn main() {
             println!("{}", file.name);
         }
     } else {
+        info!("Downloading files...");
         match multi.download_files(files, &project, directory) {
             Ok(_) => (),
             Err(e) => {

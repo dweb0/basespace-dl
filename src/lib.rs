@@ -16,6 +16,7 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::Instant;
+use log::warn;
 
 pub mod api;
 pub mod workspace;
@@ -35,12 +36,13 @@ impl MultiApi {
 
     fn get_token(&self, project: &Project) -> String {
         self.accounts
-            .get(&project.user_owned_by.id)
+            .get(&project.user_fetched_by_id)
             .expect("Could not get token from accounts")
             .to_owned()
     }
 
     pub fn get_samples_by_project(&self, project: &Project) -> Result<Vec<Sample>, failure::Error> {
+
         let token = self.get_token(&project);
         let client = reqwest::Client::new();
 
@@ -82,7 +84,6 @@ impl MultiApi {
         if files.is_empty() {
             bail!("Selected 0 files.");
         }
-
         let token = self.get_token(&project);
         let dir = dir.as_ref();
 
@@ -181,6 +182,9 @@ impl MultiApi {
             files
         });
 
+        // Could use par_iter instead, which would reduce binary size as 
+        // we no longer need tokio, but tokio seems to be consistently
+        // faster here
         let sample_len = samples.len();
         let bodies = stream::iter_ok(samples)
             .map(move |sample| {
@@ -208,7 +212,6 @@ impl MultiApi {
 
     pub fn find_project(&self, query_project: &str, print_all: bool) -> Option<Project> {
         let (tx, rx) = unbounded::<Project>();
-        let client = Client::new();
 
         let query_project = query_project.to_owned();
         let catcher = std::thread::spawn(move || {
@@ -233,7 +236,7 @@ impl MultiApi {
 
                 for (index, project) in found_projects.iter().enumerate() {
                     eprintln!(
-                        "{}: name = \"{}\", dateCreated = \"{}\"",
+                        "[{}] name = \"{}\", dateCreated = \"{}\"",
                         index, project.user_owned_by.name, project.date_created
                     );
                 }
@@ -271,33 +274,34 @@ impl MultiApi {
             }
         });
 
-        let tokens: Vec<String> = self.accounts.iter().map(|(_k, v)| v.to_owned()).collect();
-        let token_len = tokens.len();
-        let bodies = stream::iter_ok(tokens)
-            .map(move |token| {
-                client
+        // Using rayon here instead of tokio because we need
+        // to keep track of the account id used to make the request.
+        // This is used to fetch shared projects.
+        let _: Vec<Result<(), failure::Error>> = self.accounts
+            .par_iter()
+            .map(|(id, token)| {
+
+                let client = reqwest::Client::new();
+                let response: ProjectResponse = client
                     .get(&format!(
                         "{}/users/current/projects?limit={}",
                         BASESPACE_URL, RESPONSE_LIMIT
                     ))
-                    .header("x-access-token", token)
-                    .send()
-                    .and_then(|res| res.into_body().concat2().from_err())
-            })
-            .buffer_unordered(token_len);
-
-        let work = bodies
-            .for_each(move |b| {
-                let resp: ProjectResponse =
-                    serde_json::from_slice(&b).expect("Error deserializing project response");
-                for project in resp.projects() {
+                    .header("x-access-token", HeaderValue::from_str(token)?)
+                    .send()?
+                    .json()?;
+                for project in response.projects_as_user(id) {
                     tx.send(project).expect("Could not send project to sink");
                 }
                 Ok(())
             })
-            .map_err(|_e| panic!("Error"));
-
-        tokio::run(work);
+            .inspect(|result| {
+                if let Err(e) = result {
+                    warn!("{}", e);
+                }
+            })
+            .collect();
+        drop(tx);
         catcher.join().unwrap()
     }
 
@@ -314,7 +318,7 @@ impl MultiApi {
             .send()?
             .json()?;
 
-        let projects = resp.projects();
+        let projects = resp.projects_as_user(&project.user_owned_by.id);
         let unindexed_project = projects.into_iter().find(|x| x.name == "Unindexed Reads");
         let unindexed_project = match unindexed_project {
             Some(p) => p,
