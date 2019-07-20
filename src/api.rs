@@ -1,6 +1,10 @@
+/// Minimal API based - Only using what we need
+/// https://developer.basespace.illumina.com/docs/content/documentation/rest-api/api-reference
+use serde::Deserialize;
+
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct ProjectResponse {
-    #[serde(rename = "Response")]
     response: ProjectResponseB,
 }
 
@@ -11,26 +15,23 @@ impl ProjectResponse {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 struct ProjectResponseB {
-    #[serde(rename = "Items")]
     pub items: Vec<Project>,
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct Project {
-    #[serde(rename = "Name")]
     pub name: String,
-    #[serde(rename = "Id")]
     pub id: String,
-    #[serde(rename = "UserOwnedBy")]
     pub user_owned_by: User,
-    #[serde(rename = "DateCreated")]
     pub date_created: String,
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct CurrentUserResponse {
-    #[serde(rename = "Response")]
     response: CurrentUserResponseB,
 }
 
@@ -41,22 +42,21 @@ impl CurrentUserResponse {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 struct CurrentUserResponseB {
-    #[serde(rename = "Id")]
     id: String,
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct User {
-    #[serde(rename = "Name")]
     pub name: String,
-    #[serde(rename = "Id")]
     pub id: String,
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct FileResponse {
-    #[serde(rename = "Response")]
     response: FileResponseB,
 }
 
@@ -67,24 +67,23 @@ impl FileResponse {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 struct FileResponseB {
-    #[serde(rename = "Items")]
     pub items: Vec<DataFile>,
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct DataFile {
-    #[serde(rename = "Id")]
     pub id: String,
-    #[serde(rename = "Name")]
     pub name: String,
-    #[serde(rename = "Size")]
     pub size: i64,
+    pub e_tag: String,
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct SampleResponse {
-    #[serde(rename = "Response")]
     response: SampleResponseB,
 }
 
@@ -95,19 +94,16 @@ impl SampleResponse {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 struct SampleResponseB {
-    #[serde(rename = "Items")]
     pub items: Vec<Sample>,
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct Sample {
-    #[serde(rename = "Id")]
     pub id: String,
-    #[serde(rename = "Status")]
     pub status: String,
-    #[serde(rename = "Name")]
     pub name: String,
-    #[serde(rename = "ExperimentName")]
     pub experiment_name: Option<String>,
 }

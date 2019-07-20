@@ -1,16 +1,12 @@
 #[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate failure;
-#[macro_use]
 extern crate text_io;
 
+use console::style;
 use crossbeam_channel::unbounded;
+use failure::bail;
 use futures::{stream, Future, Stream};
 use pretty_bytes::converter::convert as convert_bytes;
-
-use console::style;
-use indicatif::ProgressBar;
+use rayon::prelude::*;
 use reqwest::header::HeaderValue;
 use reqwest::r#async::Client;
 use std::collections::HashMap;
@@ -18,10 +14,11 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::io::{Read, Write};
 use std::path::Path;
+use std::sync::Mutex;
+use std::time::Instant;
 
 pub mod api;
 pub mod workspace;
-
 use api::*;
 
 pub static RESPONSE_LIMIT: &'static str = "1024";
@@ -81,46 +78,84 @@ impl MultiApi {
     where
         D: AsRef<Path>,
     {
+
+        if files.is_empty() {
+            bail!("Selected 0 files.");
+        }
+
         let token = self.get_token(&project);
         let dir = dir.as_ref();
 
         let num_files = files.len();
-        for (index, file) in files.into_iter().enumerate() {
-            eprintln!(
-                "{} {} : {}",
-                style(&format!("[{}/{}]", index + 1, num_files))
-                    .bold()
-                    .dim(),
-                &file.name,
-                convert_bytes(file.size as f64)
-            );
+        let total_size: i64 = files.iter().map(|file| file.size).sum();
+        let index: Mutex<usize> = Mutex::new(0);
 
-            let pb = ProgressBar::new(file.size as u64);
-            let client = reqwest::Client::new();
-            let mut resp = client
-                .get(&format!("{}/files/{}/content", BASESPACE_URL, file.id))
-                .header("x-access-token", HeaderValue::from_str(&token)?)
-                .send()
-                .unwrap();
+        let time_before = Instant::now();
 
-            let joined_path = dir.join(file.name);
-            let mut file = File::create(joined_path)?;
-            let mut writer = BufWriter::new(&mut file);
-
-            loop {
-                let mut buffer = vec![0; 1024];
-                let bcount = resp.read(&mut buffer[..]).unwrap();
-                buffer.truncate(bcount);
-                if !buffer.is_empty() {
-                    writer.write_all(&buffer)?;
-                    pb.inc(bcount as u64);
-                } else {
-                    break;
+        let _: Vec<Result<(), failure::Error>> = files
+            .par_iter()
+            .map(|file| {
+                {
+                    let mut index = index.lock().unwrap();
+                    *index += 1;
+                    eprintln!(
+                        "{} {} : {}",
+                        style(&format!("[{}/{}]", index, num_files)).bold().dim(),
+                        &file.name,
+                        convert_bytes(file.size as f64)
+                    );
                 }
-            }
-            pb.finish_and_clear();
-        }
 
+                let client = reqwest::Client::new();
+                let mut resp = client
+                    .get(&format!("{}/files/{}/content", BASESPACE_URL, file.id))
+                    .header("x-access-token", HeaderValue::from_str(&token)?)
+                    .send()?;
+
+                let joined_path = dir.join(&file.name);
+
+                // Need separate scope since we need to close
+                // the file before calculating the etag.
+                {
+                    let mut file = File::create(&joined_path)?;
+                    let mut writer = BufWriter::new(&mut file);
+
+                    loop {
+                        let mut buffer = vec![0; 1024];
+                        let bcount = resp.read(&mut buffer[..]).unwrap();
+                        buffer.truncate(bcount);
+                        if !buffer.is_empty() {
+                            writer.write_all(&buffer)?;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+
+                // TODO: Calculate s3 etag and compare with file.e_tag
+
+                Ok(())
+            })
+            .inspect(|result| {
+                if let Err(e) = result {
+                    eprintln!("{} {}", style("warning:").bold().yellow(), e);
+                }
+            })
+            .collect();
+
+        let elapsed = time_before.elapsed().as_secs();
+
+        // Cannot divide by 0 or panic!
+        if elapsed > 0 {
+            let speed = (total_size as f64) / (elapsed as f64);
+            eprintln!(
+                "{} Downloaded {} files at {}/s",
+                style("success:").bold().green(),
+                num_files,
+                convert_bytes(speed)
+            );
+        }
+        
         Ok(())
     }
 
@@ -323,4 +358,13 @@ pub fn get_user_from_token(token: &str) -> Result<String, failure::Error> {
 
     let user_id = response.user_id().to_owned();
     Ok(user_id)
+}
+
+/// Write error message and exit
+///
+/// Helper function to reduce code bloat
+#[inline]
+pub fn write_err<D: std::fmt::Display>(msg: D) -> ! {
+    eprintln!("{} {}", style("error:").bold().red(), msg);
+    std::process::exit(1);
 }

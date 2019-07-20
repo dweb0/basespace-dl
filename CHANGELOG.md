@@ -3,6 +3,15 @@
 * Check etags to ensure file downloaded correctly
 * Shared projects?
 
+# 0.2.0  (2019-07-20)
+
+* Files are now downloaded concurrently. Woohoo!
+    - Also prints average speed when finished
+* Added select-files argument: specify the exact file names you want
+    - Useful for chaining basespace-dl commands (pipe one output to another)
+* Fixed filter method to use the file names instead of sample names
+* Lots of minor code cleanups
+
 # 0.1.2  (2019-07-13)
 
 * Added user prompt if the project has duplicates (user needs to pick desired project) 

@@ -6,9 +6,9 @@ Download files from projects accross multiple basespace accounts.
 
 ## Features
 * Easy syntax `basespace-dl PROJECT`
-* Multi account (one time config file setup)
+* Concurrent
+* Multiple accounts (just setup a config file once)
 * Only download what you need (using regex patterns)
-* Support for Undetermined files (can be a pain to find manually)
 
 ## Examples
 
@@ -50,21 +50,8 @@ Via [cargo](https://www.rust-lang.org/tools/install) (Recommended, always up to 
 cargo install --git https://github.com/dweb0/basespace-dl
 ```
 
-Via Homebrew or Linuxbrew
+**[Pre-built binaries for Mac, Windows, and Linux here.](https://github.com/dweb0/basespace-dl/releases)**
 
-```bash
-brew install dweb0/releases/basespace-dl
-```
-
-Pre-built binaries
-
-```bash
-# For mac users
-wget "https://github.com/dweb0/basespace-dl/releases/download/0.1.1/basespace-dl-0.1.1-x86_64-apple-darwin.zip"
-
-# For linux users
-wget "https://github.com/dweb0/basespace-dl/releases/download/0.1.1/basespace-dl-0.1.1-x86_64-linux.zip"
-```
 
 ## Getting started
 
@@ -92,8 +79,10 @@ in the output
 
 ```bash
 TOKEN="STORE_YOUR_TOKEN_HERE"
-curl "https://api.basespace.illumina.com/v1pre3/users/current/" -H "x-access-token: $TOKEN" | python -m json.tool
+curl "https://api.basespace.illumina.com/v1pre3/users/current/" -H "x-access-token: $TOKEN"
 ```
+
+You can also go to `https://api.basespace.illumina.com/v1pre3/users/current/` while logged in to see the same thing.
 
 ### Final steps
 

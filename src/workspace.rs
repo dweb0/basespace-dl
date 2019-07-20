@@ -1,4 +1,5 @@
 use crate::MultiApi;
+use failure::bail;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -47,13 +48,12 @@ impl Workspace {
     pub fn to_multiapi(self) -> Result<MultiApi, failure::Error> {
         let accounts = self.accounts()?;
 
-        ensure!(
-            accounts.keys().count() > 0,
-            format_err!(
+        if accounts.keys().len() == 0 {
+            bail!(
                 "{} is empty. Please add token(s).",
                 self.config_file.to_str().unwrap()
-            )
-        );
+            );
+        }
 
         Ok(MultiApi::new(self.accounts()?))
     }
