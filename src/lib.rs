@@ -143,11 +143,12 @@ impl MultiApi {
             })
             .collect();
 
-        let elapsed = time_before.elapsed().as_secs();
+        let elapsed = time_before.elapsed().as_millis();
 
         // Cannot divide by 0 or panic!
         if elapsed > 0 {
-            let speed = (total_size as f64) / (elapsed as f64);
+            // Converting ms back to seconds
+            let speed = ((total_size as f64) / (elapsed as f64)) * 1000.0; 
             eprintln!(
                 "{} Downloaded {} files at {}/s",
                 style("success:").bold().green(),
