@@ -2,6 +2,9 @@
 
 * Check etags to ensure file downloaded correctly
 
+# Unfinished update
+* Support for multiple config files
+
 # 0.2.1  (2019-07-21)
 
 * Can now download projects not owned by self (e.g. shared projects or publicly available datasets linked to your account)

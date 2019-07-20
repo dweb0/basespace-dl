@@ -52,6 +52,11 @@ fn main() {
                 .required(false)
                 .takes_value(false)
                 .help("Fetch undetermined files as well"),
+            Arg::with_name("config")
+                .long("config")
+                .short("C")
+                .takes_value(true)
+                .help("Alternate config. Stored in $HOME/.config/basespace-dl/{name}.toml"),
             Arg::with_name("verbose")
                 .long("verbose")
                 .short("v")
@@ -65,7 +70,12 @@ fn main() {
     }
     env_logger::init();
 
-    let ws = match Workspace::new() {
+    let ws = match matches.value_of("config") {
+        Some(config) => Workspace::with_config(config),
+        None => Workspace::new()
+    };
+
+    let ws = match ws {
         Ok(ws) => ws,
         Err(e) => {
             write_err(&format!("Could not generate workspace. {}", e));
