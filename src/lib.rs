@@ -17,6 +17,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Instant;
 use log::warn;
+use indicatif::ProgressBar;
 
 pub mod api;
 pub mod workspace;
@@ -90,20 +91,23 @@ impl MultiApi {
         let num_files = files.len();
         let total_size: i64 = files.iter().map(|file| file.size).sum();
         let index: Mutex<usize> = Mutex::new(0);
-
         let time_before = Instant::now();
 
+        let pb = ProgressBar::new(files.len() as u64);
+ 
         let _: Vec<Result<(), failure::Error>> = files
             .par_iter()
             .map(|file| {
                 {
                     let mut index = index.lock().unwrap();
                     *index += 1;
-                    eprintln!(
-                        "{} {} : {}",
-                        style(&format!("[{}/{}]", index, num_files)).bold().dim(),
-                        &file.name,
-                        convert_bytes(file.size as f64)
+                    pb.println(
+                        &format!(
+                            "{} {} : {}",
+                            style(&format!("[{}/{}]", index, num_files)).bold().dim(),
+                            &file.name,
+                            convert_bytes(file.size as f64)
+                        )
                     );
                 }
 
@@ -128,6 +132,7 @@ impl MultiApi {
                         if !buffer.is_empty() {
                             writer.write_all(&buffer)?;
                         } else {
+                            pb.inc(1);
                             break;
                         }
                     }
@@ -142,7 +147,10 @@ impl MultiApi {
                     eprintln!("{} {}", style("warning:").bold().yellow(), e);
                 }
             })
+            .filter(|result| result.is_err())
             .collect();
+
+        pb.finish_and_clear();
 
         let elapsed = time_before.elapsed().as_millis();
 
@@ -230,7 +238,7 @@ impl MultiApi {
             } else {
                 eprintln!(
                     "{} Found {} projects with the same name.",
-                    style(&format!("warning:")).bold().yellow(),
+                    style("warning:").bold().yellow(),
                     found_projects.len()
                 );
 
@@ -252,7 +260,7 @@ impl MultiApi {
                             if response > found_projects.len() - 1 {
                                 eprintln!(
                                     "{} Please enter an integer from 0 to {}",
-                                    style(&format!("error:")).bold().red(),
+                                    style("error:").bold().red(),
                                     found_projects.len() - 1
                                 );
                                 continue;
@@ -262,7 +270,7 @@ impl MultiApi {
                         Err(_) => {
                             eprintln!(
                                 "{} Please enter an integer from 0 to {}",
-                                style(&format!("error:")).bold().red(),
+                                style("error:").bold().red(),
                                 found_projects.len() - 1
                             );
                             continue;
@@ -331,24 +339,24 @@ impl MultiApi {
         let undetermined_sample = samples.into_iter().find(|x| match &x.experiment_name {
             Some(experiment_name) => {
                 if experiment_name == &project.name {
-                    return true;
+                    true
                 } else {
-                    return false;
+                    false
                 }
             }
             None => {
-                return false;
+                false
             }
         });
         match undetermined_sample {
-            Some(s) => return Ok(s),
+            Some(s) => Ok(s),
             None => {
                 bail!(
                     "Could not find Undetermined sample for project {}",
                     &project.name
                 );
             }
-        };
+        }
     }
 }
 
