@@ -1,4 +1,4 @@
-# `basespace-dl`
+# basespace-dl
 
 Download files from projects accross multiple basespace accounts.
 
