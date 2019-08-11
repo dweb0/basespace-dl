@@ -10,7 +10,19 @@ Download files from projects accross multiple basespace accounts.
 * Fast (concurrent fetching and downloading)
 * Only download what you need (using regex patterns)
 
+## Demo
+
+~[Demo](screencast.svg)
+
+> Demo data from Basespace's "Public Data"
+
 ## Examples
+
+List ALL projects
+
+```bash
+basespace-dl ALL
+```
 
 Download all files from a project
 
@@ -36,12 +48,6 @@ List files from a specific project
 basespace-dl project17890 -F
 ```
 
-List ALL projects
-
-```bash
-basespace-dl ALL
-```
-
 ## Installation
 
 Via [cargo](https://www.rust-lang.org/tools/install) (Recommended, always up to date)
@@ -51,7 +57,6 @@ cargo install --git https://github.com/dweb0/basespace-dl
 ```
 
 **[Pre-built binaries for Mac, Windows, and Linux here.](https://github.com/dweb0/basespace-dl/releases)**
-
 
 ## Getting started
 
