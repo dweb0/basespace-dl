@@ -59,7 +59,7 @@ cargo install --git https://github.com/dweb0/basespace-dl
 Via snapcraft (for linux users)
 
 ```
-snap install basespace-dl
+sudo snap install basespace-dl --beta --devmode
 ```
 
 **[Pre-built binaries for Mac, Windows, and Linux here.](https://github.com/dweb0/basespace-dl/releases)**
