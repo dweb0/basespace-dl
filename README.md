@@ -1,8 +1,8 @@
 # basespace-dl
 
-Download files from projects accross multiple basespace accounts.
-
 [![Build Status](https://travis-ci.com/dweb0/basespace-dl.svg?token=EQz1tk6xqYMBC8vjUmyv&branch=master)](https://travis-ci.com/dweb0/basespace-dl)
+
+Download files from projects across multiple basespace accounts.
 
 ## Features
 * Easy syntax `basespace-dl PROJECT`
@@ -12,7 +12,7 @@ Download files from projects accross multiple basespace accounts.
 
 ## Demo
 
-~[Demo](screencast.svg)
+![Demo](screencast.svg)
 
 > Demo data from Basespace's "Public Data"
 
