@@ -10,9 +10,14 @@ keywords = ["bioinformatics", "download", "downloader", "basespace"]
 categories = ["command-line-interface"]
 license = "MIT/Apache-2.0"
 edition = "2018"
+exclude = [
+    "./.travis.yml", "./appveyor.yml", "./.snapcraft.yaml",
+    "/build/*", "./screencast.svg"
+]
 
 [badges]
 travis-ci = { repository = "dweb0/basespace-dl" }
+appveyor = { repository = "dweb0/basespace-dl", service = "github" }
 
 [[bin]]
 name = "basespace-dl"
