@@ -6,6 +6,10 @@ language: rust
 services: docker
 sudo: required
 
+# deploy:
+#   on:
+#     condition: $DEPLOY = never
+
 # TODO Rust builds on stable by default, this can be
 # overridden on a case by case basis down below.
 
@@ -24,20 +28,8 @@ matrix:
     - env: TARGET=x86_64-unknown-linux-gnu
 
     # OSX
-    - env: TARGET=i686-apple-darwin
-      os: osx
     - env: TARGET=x86_64-apple-darwin
       os: osx
-
-    # Windows
-    - env: TARGET=x86_64-pc-windows-gnu
-
-    # Testing other channels
-    - env: TARGET=x86_64-unknown-linux-gnu
-      rust: nightly
-    - env: TARGET=x86_64-apple-darwin
-      os: osx
-      rust: nightly
 
 before_install:
   - set -e

@@ -108,7 +108,3 @@ chmod 600 ~/.config/basespace-dl/default.toml
 
 Now you're ready to go!
 
-## Acknowledgements
-
-Special thanks to the developers of the all the libraries in Cargo.toml, as well as [Shepmaster](https://stackoverflow.com/users/155423/shepmaster) for help with tokio.
-
