@@ -95,7 +95,7 @@ TOKEN="STORE_YOUR_TOKEN_HERE"
 curl "https://api.basespace.illumina.com/v1pre3/users/current/" -H "x-access-token: $TOKEN"
 ```
 
-You can also go to `https://api.basespace.illumina.com/v1pre3/users/current/` while logged in to see the same thing.
+You can also go to https://api.basespace.illumina.com/v1pre3/users/current while logged in to see the same thing.
 
 ### Final steps
 
