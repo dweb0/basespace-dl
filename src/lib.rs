@@ -314,6 +314,11 @@ impl MultiApi {
     }
 
     pub fn get_undetermined_sample(&self, project: &Project) -> Result<Sample, failure::Error> {
+
+        if project.user_fetched_by_id != project.user_owned_by.id {
+            bail!("Must be the owner of a project to access its \"Unindexed Reads\".");
+        }
+
         let token = self.get_token(&project);
         let client = reqwest::Client::new();
 
