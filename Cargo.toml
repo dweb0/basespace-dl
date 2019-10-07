@@ -1,6 +1,6 @@
 [package]
 name = "basespace-dl"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["dweb0"]
 description = "Multi-account basespace file downloader"
 homepage = "https://github.com/dweb0/basespace-dl"

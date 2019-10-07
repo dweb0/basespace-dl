@@ -70,7 +70,7 @@ impl Workspace {
         Ok(())
     }
 
-    pub fn to_multiapi(self) -> Result<MultiApi, failure::Error> {
+    pub fn to_multiapi(&self) -> Result<MultiApi, failure::Error> {
         let accounts = self.accounts()?;
 
         if accounts.keys().len() == 0 {

@@ -165,7 +165,7 @@ fn main() {
     }
 
     if let Some(filelist) = matches.value_of("select-files") {
-        let mut reader: Box<Read> = match filelist {
+        let mut reader: Box<dyn Read> = match filelist {
             "-" => {
                 Box::new(std::io::stdin())
             },

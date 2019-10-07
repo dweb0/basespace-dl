@@ -2,7 +2,9 @@
 
 * Check etags to ensure file downloaded correctly
 
-# Unfinished update
+# 0.2.2  (2019-10-07)
+
+* Added file size check
 * Support for multiple config files
 
 # 0.2.1  (2019-07-21)

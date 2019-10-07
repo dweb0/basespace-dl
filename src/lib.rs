@@ -18,13 +18,14 @@ use std::sync::Mutex;
 use std::time::Instant;
 use log::warn;
 use indicatif::ProgressBar;
+use std::fs;
 
 pub mod api;
 pub mod workspace;
 use api::*;
 
-pub static RESPONSE_LIMIT: &'static str = "1024";
-pub static BASESPACE_URL: &'static str = "https://api.basespace.illumina.com/v1pre3";
+pub static RESPONSE_LIMIT: &str = "1024";
+pub static BASESPACE_URL: &str = "https://api.basespace.illumina.com/v1pre3";
 
 pub struct MultiApi {
     pub accounts: HashMap<String, String>,
@@ -90,6 +91,8 @@ impl MultiApi {
 
         let num_files = files.len();
         let total_size: i64 = files.iter().map(|file| file.size).sum();
+
+        // TODO: Use AtomicUsize instead of Mutex
         let index: Mutex<usize> = Mutex::new(0);
         let time_before = Instant::now();
 
@@ -138,7 +141,11 @@ impl MultiApi {
                     }
                 }
 
-                // TODO: Calculate s3 etag and compare with file.e_tag
+                // TODO: It's a better idea to use etag to ensure file integrity,
+                // but this requires knowing the etag part size
+                if fs::metadata(&joined_path)?.len() != file.size as u64 {
+                    bail!("{} did not match expected file size.", file.name);
+                }
 
                 Ok(())
             })
@@ -233,7 +240,7 @@ impl MultiApi {
             }
             if found_projects.len() == 1 {
                 Some(found_projects.remove(0))
-            } else if found_projects.len() == 0 {
+            } else if found_projects.is_empty() {
                 None
             } else {
                 eprintln!(
@@ -342,16 +349,8 @@ impl MultiApi {
 
         let samples = self.get_samples_by_project(&unindexed_project)?;
         let undetermined_sample = samples.into_iter().find(|x| match &x.experiment_name {
-            Some(experiment_name) => {
-                if experiment_name == &project.name {
-                    true
-                } else {
-                    false
-                }
-            }
-            None => {
-                false
-            }
+            Some(experiment_name) => experiment_name == &project.name,
+            None => false
         });
         match undetermined_sample {
             Some(s) => Ok(s),
