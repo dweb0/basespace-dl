@@ -2,6 +2,13 @@
 
 * Check etags to ensure file downloaded correctly
 
+# 0.2.3  (2019-10-16)
+
+* Added check for Undetermined files - if a project is rerun, basespace will generate a new "Unindexed Reads"
+sample under the same project. The only way to tell the difference is by date, so I added a prompt to let
+the user choose if this happens.
+* Updated `Cargo.toml` to use most recent crates.
+
 # 0.2.2  (2019-10-07)
 
 * Added file size check

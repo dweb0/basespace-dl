@@ -137,4 +137,5 @@ pub struct Sample {
     pub status: String,
     pub name: String,
     pub experiment_name: Option<String>,
+    pub date_created: String
 }

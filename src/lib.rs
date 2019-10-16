@@ -348,10 +348,64 @@ impl MultiApi {
         };
 
         let samples = self.get_samples_by_project(&unindexed_project)?;
-        let undetermined_sample = samples.into_iter().find(|x| match &x.experiment_name {
+
+        // If a project is rerun, a separate set of Undetermined files
+        // is created under the same project name. The only way to differentiate
+        // is by date, so we need to the user to make the decision.
+        let mut undetermined_samples: Vec<_> = samples.into_iter().filter(|x| match &x.experiment_name {
             Some(experiment_name) => experiment_name == &project.name,
             None => false
-        });
+        }).collect();
+
+        let undetermined_sample = if undetermined_samples.len() == 1 {
+            Some(undetermined_samples.remove(0))
+        } else if undetermined_samples.is_empty() {
+            None
+        } else {
+            eprintln!(
+                "{} Found {} \"Unindexed Reads\" with the same project name",
+                style("warning:").bold().yellow(),
+                undetermined_samples.len()
+            );
+            for (index, sample) in undetermined_samples.iter().enumerate() {
+                eprintln!(
+                    "[{}] name = \"{}\", dateCreated = \"{}\"",
+                    index, sample.name, sample.date_created
+                );
+            }
+
+            let user_index = loop {
+                eprint!(
+                    "Enter the sample index [0..{}]: ",
+                    undetermined_samples.len() - 1
+                );
+                let response: Result<usize, _> = try_read!();
+                let response = match response {
+                    Ok(response) => {
+                        if response > undetermined_samples.len() - 1 {
+                            eprintln!(
+                                "{} Please enter an integer from 0 to {}",
+                                style("error:").bold().red(),
+                                undetermined_samples.len() - 1
+                            );
+                            continue;
+                        }
+                        response
+                    }
+                    Err(_) => {
+                        eprintln!(
+                            "{} Please enter an integer from 0 to {}",
+                            style("error:").bold().red(),
+                            undetermined_samples.len() - 1
+                        );
+                        continue;
+                    }
+                };
+                break response;
+            };
+            Some(undetermined_samples.remove(user_index))
+        };
+
         match undetermined_sample {
             Some(s) => Ok(s),
             None => {
