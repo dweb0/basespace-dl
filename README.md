@@ -58,12 +58,6 @@ Via [cargo](https://www.rust-lang.org/tools/install) (Recommended, always up to 
 cargo install --git https://github.com/dweb0/basespace-dl
 ```
 
-Via snapcraft (for linux users)
-
-```
-sudo snap install basespace-dl --beta --devmode
-```
-
 **[Pre-built binaries for Mac, Windows, and Linux here.](https://github.com/dweb0/basespace-dl/releases)**
 
 ## Getting started

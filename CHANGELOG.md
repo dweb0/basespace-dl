@@ -1,6 +1,15 @@
 # TODO
 
 * Check etags to ensure file downloaded correctly
+* Automatically get token ID when new token is added
+* Implement "cache" for storing http responses
+
+# 0.3.0  (2019-12-07)
+
+* Complete rewrite with async/await!
+* Better error handling in `main.rs`.
+* Better API deserialization using `serde_struct_wrapper`. No longer need to use wrapper structs
+* Added jaro_winkler to show similar projects if queried project does not exist
 
 # 0.2.3  (2019-10-16)
 

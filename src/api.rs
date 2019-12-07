@@ -4,8 +4,9 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
+#[serde(remote = "Self")]
 pub struct ProjectResponse {
-    response: ProjectResponseB,
+    items: Vec<_Project>,
 }
 
 impl ProjectResponse {
@@ -13,7 +14,7 @@ impl ProjectResponse {
     /// the user_fetched_by field, which is required
     /// for later steps.
     pub fn projects_as_user(self, user_id: &str) -> Vec<Project> {
-        self.response.items
+        self.items
             .into_iter()
             .map(|project| {
                 Project {
@@ -26,12 +27,6 @@ impl ProjectResponse {
             })
             .collect()
     }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-struct ProjectResponseB {
-    pub items: Vec<_Project>,
 }
 
 /// This is the actual schema for the API response,
@@ -60,22 +55,18 @@ pub struct Project {
     pub date_created: String,
 }
 
+
+impl AsRef<str> for Project {
+    fn as_ref(&self) -> &str {
+        self.name.as_ref()
+    } 
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
+#[serde(remote = "Self")]
 pub struct CurrentUserResponse {
-    response: CurrentUserResponseB,
-}
-
-impl CurrentUserResponse {
-    pub fn user_id(&self) -> &str {
-        &self.response.id
-    }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-struct CurrentUserResponseB {
-    id: String,
+    pub id: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -87,19 +78,8 @@ pub struct User {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
+#[serde(remote = "Self")]
 pub struct FileResponse {
-    response: FileResponseB,
-}
-
-impl FileResponse {
-    pub fn files(self) -> Vec<DataFile> {
-        self.response.items
-    }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-struct FileResponseB {
     pub items: Vec<DataFile>,
 }
 
@@ -114,21 +94,11 @@ pub struct DataFile {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
+#[serde(remote = "Self")]
 pub struct SampleResponse {
-    response: SampleResponseB,
-}
-
-impl SampleResponse {
-    pub fn samples(self) -> Vec<Sample> {
-        self.response.items
-    }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-struct SampleResponseB {
     pub items: Vec<Sample>,
 }
+
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
@@ -139,3 +109,9 @@ pub struct Sample {
     pub experiment_name: Option<String>,
     pub date_created: String
 }
+
+
+deserialize_with_root!("Response": SampleResponse);
+deserialize_with_root!("Response": FileResponse);
+deserialize_with_root!("Response": CurrentUserResponse);
+deserialize_with_root!("Response": ProjectResponse);
