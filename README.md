@@ -50,18 +50,14 @@ List files from a specific project
 basespace-dl project17890 -F
 ```
 
+For some more advanced examples of what you can do, check out the [cookbook](cookbook.md).
+
 ## Installation
 
 Via [cargo](https://www.rust-lang.org/tools/install) (Recommended, always up to date)
 
 ```
 cargo install --git https://github.com/dweb0/basespace-dl
-```
-
-Via snapcraft (for linux users)
-
-```
-sudo snap install basespace-dl --beta --devmode
 ```
 
 **[Pre-built binaries for Mac, Windows, and Linux here.](https://github.com/dweb0/basespace-dl/releases)**
@@ -107,5 +103,10 @@ Note: It's a good idea to set the file permissions as readable / writeable by on
 chmod 600 ~/.config/basespace-dl/default.toml
 ```
 
-Now you're ready to go!
+Now you're ready to go! 
 
+Try running a command to see if it works (assuming you have projects in your account).
+
+```bash
+basespace-dl ALL
+```
