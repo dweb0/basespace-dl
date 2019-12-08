@@ -50,6 +50,8 @@ List files from a specific project
 basespace-dl project17890 -F
 ```
 
+For some more advanced examples of what you can do, check out the [cookbook](cookbook.md).
+
 ## Installation
 
 Via [cargo](https://www.rust-lang.org/tools/install) (Recommended, always up to date)

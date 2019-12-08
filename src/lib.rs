@@ -4,26 +4,26 @@ extern crate serde_struct_wrapper;
 #[macro_use]
 extern crate text_io;
 
-use futures::prelude::*;
-use futures::stream::futures_unordered::FuturesUnordered;
-use pretty_bytes::converter::convert;
-use std::collections::HashMap;
-use std::time::Instant;
-
 pub mod api;
 pub mod util;
 pub mod workspace;
+
 use api::*;
 use console::style;
+use crossbeam_channel::unbounded;
 use failure::bail;
+use futures::prelude::*;
+use futures::stream::futures_unordered::FuturesUnordered;
 use indicatif::ProgressBar;
 use log::info;
 use rayon::prelude::*;
+use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Instant;
 
 pub static RESPONSE_LIMIT: &str = "1024";
 pub static BASESPACE_URL: &str = "https://api.basespace.illumina.com/v1pre3";
@@ -77,7 +77,6 @@ impl MultiApi {
             .expect("Could not get token from accounts");
 
         let client = reqwest::Client::new();
-
         let mut file_futures = FuturesUnordered::new();
 
         if let Some(unindexed_reads) = unindexed_reads {
@@ -171,7 +170,6 @@ impl MultiApi {
         files: &[DataFile],
         project: &Project,
         output_dir: impl AsRef<Path>,
-        verify_etag: bool
     ) -> Result<(), failure::Error> {
         if files.is_empty() {
             bail!("Selected 0 files to download");
@@ -187,21 +185,27 @@ impl MultiApi {
         let total_size: i64 = files.iter().map(|file| file.size).sum();
         let index = AtomicUsize::new(1);
         let time_before = Instant::now();
-        let pb = ProgressBar::new(total_size as u64);
-        pb.set_style(
-            indicatif::ProgressStyle::default_bar()
-                .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
-                .progress_chars("#>-")
-        );
+        let pb = ProgressBar::new(num_files as u64);
+
+        // Catch badly download files, so we can inform the user
+        // afterwards that they need to download them again
+        let (tx, rx) = unbounded::<DataFile>();
+        let catcher = std::thread::spawn(move || {
+            let mut files = vec![];
+            while let Ok(file) = rx.recv() {
+                files.push(file);
+            }
+            files
+        });
 
         let errors: Vec<failure::Error> = files
             .par_iter()
             .map(|file| {
                 let index = index.fetch_add(1, Ordering::SeqCst);
                 pb.println(&format!(
-                    "{} {:>12} {}",
+                    "{:<9} {:>4}  {}",
                     style(&format!("[{}/{}]", index, num_files)).bold().dim(),
-                    convert(file.size as f64),
+                    util::convert_bytes(file.size as f64),
                     &file.name,
                 ));
 
@@ -219,33 +223,30 @@ impl MultiApi {
                     loop {
                         let mut buffer = vec![0; 1024];
                         let bcount = resp.read(&mut buffer[..]).unwrap();
-                        pb.inc(bcount as u64);
                         buffer.truncate(bcount);
                         if !buffer.is_empty() {
                             writer.write_all(&buffer).unwrap();
                         } else {
+                            pb.inc(1);
                             break;
                         }
                     }
                 }
 
                 if fs::metadata(&output)?.len() != file.size as u64 {
+                    tx.send(file.clone()).unwrap();
                     bail!("{} did not match expected file size.", file.name);
                 }
 
-                if verify_etag {
-                    if !util::verify_s3_etag(&output, &file.e_tag, file.size as u64)? {
-                        bail!("{} did not match expected etag", file.name);
-                    }
-                }
-                
                 Ok(())
             })
             .filter_map(|res| res.err())
             .collect();
 
+        drop(tx);
         pb.finish_and_clear();
         let elapsed = time_before.elapsed().as_millis();
+        let bad_files = catcher.join().unwrap();
 
         if elapsed > 0 {
             let speed = ((total_size as f64) / (elapsed as f64)) * 1000.0;
@@ -255,18 +256,32 @@ impl MultiApi {
                     "{} Downloaded {} files at {}/s",
                     style("success:").bold().green(),
                     num_files,
-                    convert(speed)
+                    util::convert_bytes(speed)
                 );
             } else {
                 eprintln!(
                     "{} Download {} files at {}/s, but there were {} errors.",
                     style("warning:").bold().yellow(),
                     num_files,
-                    convert(speed),
+                    util::convert_bytes(speed),
                     errors.len()
                 );
                 for error in errors {
                     eprintln!("{}", error);
+                }
+                if !bad_files.is_empty() {
+                    let log_file = std::env::temp_dir().join("bdl_last_failed_download");
+                    let mut writer = File::create(&log_file)
+                        .expect("Could not create log file for badly formatted files");
+                    for file in bad_files {
+                        writeln!(&mut writer, "{}", file.name).unwrap();
+                    }
+                    eprintln!(
+                        "{} Files stored in {}. You can retry downloading \
+                         just these files using the -f argument",
+                        style("tip:").bold().cyan(),
+                        log_file.to_str().unwrap()
+                    );
                 }
             }
         }

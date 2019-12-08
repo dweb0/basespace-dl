@@ -5,9 +5,7 @@ use console::style;
 use failure::bail;
 use failure::ResultExt;
 use log::info;
-use pretty_bytes::converter::convert;
 use regex::Regex;
-use std::cmp::Reverse;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -46,13 +44,6 @@ fn build_app() -> App<'static, 'static> {
                 .short("d")
                 .takes_value(true)
                 .help("Download files to this directory."),
-            Arg::with_name("sort-by")
-                .long("sort-by")
-                .short("s")
-                .required(false)
-                .takes_value(true)
-                .possible_values(&["name", "size-smallest", "size-biggest"])
-                .help("Sort files by attribute"),
             Arg::with_name("undetermined")
                 .long("undetermined")
                 .short("U")
@@ -64,11 +55,6 @@ fn build_app() -> App<'static, 'static> {
                 .short("C")
                 .takes_value(true)
                 .help("Alternate config. Stored in $HOME/.config/basespace-dl/{name}.toml"),
-            Arg::with_name("verify-etag")
-                .long("verify-etag")
-                .short("V")
-                .takes_value(false)
-                .help("Verify files are downloaded correctly using the etag."),
             Arg::with_name("verbose")
                 .long("verbose")
                 .short("v")
@@ -128,7 +114,7 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
     let project = if matching_projects.is_empty() {
         let candidates = util::did_you_mean(query, projects);
         if candidates.is_empty() {
-            bail!("no such project {}.");
+            bail!("no such project {}.", query);
         }
         bail!(
             "no such project {}. Did you mean one of these?\n\n{}",
@@ -181,21 +167,6 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
             .collect();
     }
 
-    if let Some(v) = matches.value_of("sort-by") {
-        match v {
-            "name" => {
-                files.sort_by_key(|file| file.name.to_owned());
-            }
-            "size-smallest" => {
-                files.sort_by_key(|file| file.size);
-            }
-            "size-biggest" => {
-                files.sort_by_key(|file| Reverse(file.size));
-            }
-            _ => unreachable!(),
-        };
-    }
-
     if matches.is_present("list-files") {
         let stdout = std::io::stdout();
         let mut stdout = stdout.lock();
@@ -203,13 +174,10 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
         if matches.occurrences_of("list-files") > 1 {
             let mut writer = TabWriter::new(&mut stdout);
             for file in files {
-                let human_size = convert(file.size as f64); 
-                let human_size_parts = human_size.split(" ").collect::<Vec<_>>();
                 writeln!(
                     &mut writer,
-                    "{}\t{}\t{}",
-                    human_size_parts[0],
-                    human_size_parts[1],
+                    "{:>4}\t{}",
+                    util::convert_bytes(file.size as f64),
                     file.name
                 )
                 .unwrap_or_else(|_| {
@@ -229,10 +197,8 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
 
     info!("Downloading {} files...", files.len());
 
-    let verify_etag = matches.is_present("verify-etag");
-
     multi
-        .download_files(&files, project, directory, verify_etag)
+        .download_files(&files, project, directory)
         .with_context(|e| format!("Could not download files. {}", e))?;
 
     Ok(())

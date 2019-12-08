@@ -1,10 +1,9 @@
 use super::api::{Project, Sample};
 use console::style;
-use std::io::{Write, Read, BufReader};
-use tabwriter::TabWriter;
-use std::path::Path;
-use std::fs::File;
 use failure::bail;
+use number_prefix::{NumberPrefix, PrefixNames, Prefixed, Standalone};
+use std::io::{Read, Write};
+use tabwriter::TabWriter;
 
 /// Return the top 5 closest matching hits for a given query
 ///
@@ -133,33 +132,20 @@ pub fn resolve_duplicate_unindexed_reads(mut samples: Vec<&Sample>) -> &Sample {
     samples.remove(user_index)
 }
 
+/// Calculate s3 etag from known part size
+pub fn s3_etag(
+    mut rdr: impl Read,
+    file_size: usize,
+    part_size: usize,
+) -> Result<String, failure::Error> {
 
-/// Calculate the s3 etag from path, and compare it with 
-/// the expected etag.
-/// 
-/// This function requires the expected etag and file size (in bytes), in order
-/// to deduce the part size.
-pub fn verify_s3_etag(path: impl AsRef<Path>, expected_etag: &str, file_size: u64) -> Result<bool, failure::Error> {
+    if file_size <= part_size {
+        let mut buffer = vec![0; file_size];
+        rdr.read_exact(&mut buffer[..]).unwrap();
+        let digest = md5::compute(&buffer);
+        return Ok(format!("{:?}", digest));
+    }
 
-    let num_parts = match expected_etag.find('-') {
-        Some(index) => {
-            expected_etag
-                .chars()
-                .skip(index + 1)
-                .collect::<String>()
-                .parse::<usize>()?
-        },
-        None => 1
-    };
-
-    // Assumes AWS part sizes are a factor of one megabyte
-    static ONE_MEGABYTE: f64 = 1024.0 * 1024.0;
-
-    let x = file_size as f64 / num_parts as f64;
-    let y = x % (ONE_MEGABYTE);
-    let part_size = (x - y + (ONE_MEGABYTE)) as usize;
-
-    let mut rdr = BufReader::new(File::open(path)?);
     let mut digests: Vec<u8> = Vec::new();
     let mut parts = 0;
 
@@ -178,13 +164,89 @@ pub fn verify_s3_etag(path: impl AsRef<Path>, expected_etag: &str, file_size: u6
         }
     }
 
-    let actual_etag = if digests.is_empty() {
+    if digests.is_empty() || parts < 2 {
         bail!("Could not calculate etag.");
-    } else if digests.len() == 1 {
-        format!("{:?}", digests[0])
+    } else {
+        Ok(format!("{:?}-{}", md5::compute(digests.as_slice()), parts))
+    }
+}
+ 
+/// Calculate the s3 etag from path, and compare it with
+/// the expected etag.
+///
+/// The advantage of this function is that we don't need to know
+/// the etag part size (if we already know the file size and known etag).
+/// 
+/// TODO: part size calculation is not working. Do not use this function
+pub fn verify_s3_etag(
+    mut rdr: impl Read,
+    expected_etag: &str,
+    file_size: u64,
+) -> Result<bool, failure::Error> {
+    let num_parts = match expected_etag.find('-') {
+        Some(index) => expected_etag
+            .chars()
+            .skip(index + 1)
+            .collect::<String>()
+            .parse::<usize>()?,
+        None => {
+            let mut buffer = vec![0; file_size as usize];
+            rdr.read_exact(&mut buffer[..]).unwrap();
+            let digest = md5::compute(&buffer);
+            let actual_etag = format!("{:?}", digest);
+            return Ok(actual_etag == expected_etag);
+        }
+    };
+
+    // Assumes AWS part sizes are a factor of one megabyte
+    static ONE_MEGABYTE: f64 = 1024.0 * 1024.0;
+
+    // TODO: does not work 100% of the time. 
+    let x = file_size as f64 / num_parts as f64;
+    let y = x % (ONE_MEGABYTE);
+    let part_size = (x - y + (ONE_MEGABYTE)) as usize;
+
+    let mut digests: Vec<u8> = Vec::new();
+    let mut parts = 0;
+
+    loop {
+        let mut buffer = vec![0; part_size];
+        let bcount = rdr.read(&mut buffer[..]).unwrap();
+        if bcount == 0 {
+            break;
+        }
+        buffer.truncate(bcount);
+        let digest = md5::compute(&buffer);
+        digests.extend(&digest.0);
+        parts += 1;
+        if buffer.is_empty() {
+            break;
+        }
+    }
+
+    let actual_etag = if digests.is_empty() || parts < 2 {
+        bail!("Could not calculate etag.");
     } else {
         format!("{:?}-{}", md5::compute(digests.as_slice()), parts)
     };
 
-    Ok(&actual_etag == expected_etag)
+    Ok(actual_etag == expected_etag)
+}
+
+/// Convert bytes to human readable form.
+///
+/// Trying to match format of unix's "ls -lh" command
+pub fn convert_bytes(num: f64) -> String {
+    match NumberPrefix::decimal(num) {
+        Standalone(bytes) => bytes.to_string(),
+        Prefixed(prefix, n) => {
+            let symbol = prefix.symbol();
+            let number = if n >= 10.0 {
+                format!("{:.0}", n)
+            } else {
+                format!("{:.1}", n)
+            };
+            format!("{}{}", number, symbol)
+        }
+    }
 }

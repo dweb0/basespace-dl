@@ -80,7 +80,7 @@ pub struct FileResponse {
     pub items: Vec<DataFile>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct DataFile {
     pub id: String,
@@ -110,7 +110,7 @@ pub struct Sample {
 #[serde(rename_all = "PascalCase")]
 #[serde(remote = "Self")]
 pub struct RunResponse {
-    items: Vec<Run> 
+    items: Vec<Run>,
 }
 
 #[derive(Deserialize, Debug)]
