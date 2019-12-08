@@ -1,5 +1,10 @@
 use super::api::{Project, Sample};
 use console::style;
+use std::io::{Write, Read, BufReader};
+use tabwriter::TabWriter;
+use std::path::Path;
+use std::fs::File;
+use failure::bail;
 
 /// Return the top 5 closest matching hits for a given query
 ///
@@ -35,12 +40,20 @@ pub fn resolve_duplicate_projects(mut projects: Vec<&Project>) -> &Project {
         projects.len()
     );
 
+    let stderr = std::io::stderr();
+    let mut stderr = stderr.lock();
+    let mut writer = TabWriter::new(&mut stderr);
+
+    writeln!(&mut writer, "#\tname\tdate created").unwrap();
     for (index, project) in projects.iter().enumerate() {
-        eprintln!(
-            "[{}] name = \"{}\", dateCreated = \"{}\"",
+        writeln!(
+            &mut writer,
+            "{}\t{}\t{}",
             index, project.user_owned_by.name, project.date_created
-        );
+        )
+        .unwrap();
     }
+    writer.flush().unwrap();
 
     let invalid_input = format!(
         "{} Please enter an integer from 0 to {}",
@@ -73,17 +86,25 @@ pub fn resolve_duplicate_projects(mut projects: Vec<&Project>) -> &Project {
 /// is by data, so we need the user to make the decision.
 pub fn resolve_duplicate_unindexed_reads(mut samples: Vec<&Sample>) -> &Sample {
     eprintln!(
-        "{} Found {} \"Unindexed Reads\" with the same project name",
+        "{} Found {} \"Unindexed Reads\" with the same project name.",
         style("warning:").bold().yellow(),
         samples.len()
     );
 
+    let stderr = std::io::stderr();
+    let mut stderr = stderr.lock();
+    let mut writer = TabWriter::new(&mut stderr);
+
+    writeln!(&mut writer, "#\tname\tdate created").unwrap();
     for (index, sample) in samples.iter().enumerate() {
-        eprintln!(
-            "[{}] name = \"{}\", dateCreated = \"{}\"",
+        writeln!(
+            &mut writer,
+            "{}\t{}\t{}",
             index, sample.name, sample.date_created
-        );
+        )
+        .unwrap();
     }
+    writer.flush().unwrap();
 
     let invalid_input = format!(
         "{} Please enter an integer from 0 to {}",
@@ -110,4 +131,60 @@ pub fn resolve_duplicate_unindexed_reads(mut samples: Vec<&Sample>) -> &Sample {
     };
 
     samples.remove(user_index)
+}
+
+
+/// Calculate the s3 etag from path, and compare it with 
+/// the expected etag.
+/// 
+/// This function requires the expected etag and file size (in bytes), in order
+/// to deduce the part size.
+pub fn verify_s3_etag(path: impl AsRef<Path>, expected_etag: &str, file_size: u64) -> Result<bool, failure::Error> {
+
+    let num_parts = match expected_etag.find('-') {
+        Some(index) => {
+            expected_etag
+                .chars()
+                .skip(index + 1)
+                .collect::<String>()
+                .parse::<usize>()?
+        },
+        None => 1
+    };
+
+    // Assumes AWS part sizes are a factor of one megabyte
+    static ONE_MEGABYTE: f64 = 1024.0 * 1024.0;
+
+    let x = file_size as f64 / num_parts as f64;
+    let y = x % (ONE_MEGABYTE);
+    let part_size = (x - y + (ONE_MEGABYTE)) as usize;
+
+    let mut rdr = BufReader::new(File::open(path)?);
+    let mut digests: Vec<u8> = Vec::new();
+    let mut parts = 0;
+
+    loop {
+        let mut buffer = vec![0; part_size];
+        let bcount = rdr.read(&mut buffer[..]).unwrap();
+        if bcount == 0 {
+            break;
+        }
+        buffer.truncate(bcount);
+        let digest = md5::compute(&buffer);
+        digests.extend(&digest.0);
+        parts += 1;
+        if buffer.is_empty() {
+            break;
+        }
+    }
+
+    let actual_etag = if digests.is_empty() {
+        bail!("Could not calculate etag.");
+    } else if digests.len() == 1 {
+        format!("{:?}", digests[0])
+    } else {
+        format!("{:?}-{}", md5::compute(digests.as_slice()), parts)
+    };
+
+    Ok(&actual_etag == expected_etag)
 }

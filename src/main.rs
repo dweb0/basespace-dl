@@ -64,6 +64,11 @@ fn build_app() -> App<'static, 'static> {
                 .short("C")
                 .takes_value(true)
                 .help("Alternate config. Stored in $HOME/.config/basespace-dl/{name}.toml"),
+            Arg::with_name("verify-etag")
+                .long("verify-etag")
+                .short("V")
+                .takes_value(false)
+                .help("Verify files are downloaded correctly using the etag."),
             Arg::with_name("verbose")
                 .long("verbose")
                 .short("v")
@@ -94,6 +99,17 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
         None => Workspace::new(),
     }
     .with_context(|e| format!("Could not generate workspace. {}", e))?;
+
+    let directory = match matches.value_of("directory") {
+        Some(dir) => {
+            let path_dir = PathBuf::from(dir);
+            if !path_dir.is_dir() {
+                bail!("{} is not a valid directory", dir);
+            }
+            path_dir
+        }
+        None => PathBuf::from("."),
+    };
 
     let multi = ws
         .to_multiapi()
@@ -187,10 +203,18 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
         if matches.occurrences_of("list-files") > 1 {
             let mut writer = TabWriter::new(&mut stdout);
             for file in files {
-                writeln!(&mut writer, "{}\t{}", convert(file.size as f64).replace(" ", ""), file.name)
-                    .unwrap_or_else(|_| {
-                        std::process::exit(0);
-                    });
+                let human_size = convert(file.size as f64); 
+                let human_size_parts = human_size.split(" ").collect::<Vec<_>>();
+                writeln!(
+                    &mut writer,
+                    "{}\t{}\t{}",
+                    human_size_parts[0],
+                    human_size_parts[1],
+                    file.name
+                )
+                .unwrap_or_else(|_| {
+                    std::process::exit(0);
+                });
             }
             writer.flush()?;
         } else {
@@ -205,19 +229,10 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
 
     info!("Downloading {} files...", files.len());
 
-    let directory = match matches.value_of("directory") {
-        Some(dir) => {
-            let path_dir = PathBuf::from(dir);
-            if !path_dir.is_dir() {
-                bail!("{} is not a valid directory", dir);
-            }
-            path_dir
-        }
-        None => PathBuf::from("."),
-    };
+    let verify_etag = matches.is_present("verify-etag");
 
     multi
-        .download_files(&files, project, directory)
+        .download_files(&files, project, directory, verify_etag)
         .with_context(|e| format!("Could not download files. {}", e))?;
 
     Ok(())

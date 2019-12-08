@@ -6,24 +6,24 @@ extern crate text_io;
 
 use futures::prelude::*;
 use futures::stream::futures_unordered::FuturesUnordered;
-use std::collections::HashMap;
 use pretty_bytes::converter::convert;
+use std::collections::HashMap;
 use std::time::Instant;
 
 pub mod api;
 pub mod util;
 pub mod workspace;
 use api::*;
-use log::info;
-use std::path::Path;
-use failure::bail;
-use rayon::prelude::*;
-use std::fs::File;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::io::{BufWriter, Read, Write};
 use console::style;
+use failure::bail;
 use indicatif::ProgressBar;
+use log::info;
+use rayon::prelude::*;
 use std::fs;
+use std::fs::File;
+use std::io::{BufWriter, Read, Write};
+use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub static RESPONSE_LIMIT: &str = "1024";
 pub static BASESPACE_URL: &str = "https://api.basespace.illumina.com/v1pre3";
@@ -92,19 +92,32 @@ impl MultiApi {
                 .await?
                 .json::<SampleResponse>()
                 .await?;
-            let mut undetermined_samples: Vec<_> = resp.items.iter().filter(|x| match &x.experiment_name {
-                Some(experiment_name) => experiment_name == &project.name,
-                None => false
-            }).collect();
+
+            let mut undetermined_samples: Vec<_> = resp
+                .items
+                .iter()
+                .filter(|x| match &x.experiment_name {
+                    Some(experiment_name) => experiment_name == &project.name,
+                    None => false,
+                })
+                .collect();
+
             let undetermined_sample = if undetermined_samples.is_empty() {
-                bail!("Could not find Undetermined sample for project {}", project.name);
+                bail!(
+                    "Could not find Undetermined sample for project {}",
+                    project.name
+                );
             } else if undetermined_samples.len() > 1 {
                 util::resolve_duplicate_unindexed_reads(undetermined_samples)
             } else {
                 undetermined_samples.remove(0)
             };
+
             let resp = client
-                .get(&format!("{}/samples/{}/files", BASESPACE_URL, undetermined_sample.id))
+                .get(&format!(
+                    "{}/samples/{}/files",
+                    BASESPACE_URL, undetermined_sample.id
+                ))
                 .header("x-access-token", token)
                 .send();
             file_futures.push(resp);
@@ -121,11 +134,19 @@ impl MultiApi {
             .json::<SampleResponse>()
             .await?;
 
-        let unfinished_samples: Vec<_> = resp.items.iter().filter(|s| s.status != "Complete").collect();
+        let unfinished_samples: Vec<_> = resp
+            .items
+            .iter()
+            .filter(|s| s.status != "Complete")
+            .collect();
+
         if !unfinished_samples.is_empty() {
-            bail!("Project not finished yet. {} samples still processing.", unfinished_samples.len());
+            bail!(
+                "Project not finished yet. {} samples still processing.",
+                unfinished_samples.len()
+            );
         }
-        
+
         for sample in resp.items {
             let resp = client
                 .get(&format!("{}/samples/{}/files", BASESPACE_URL, sample.id))
@@ -135,7 +156,7 @@ impl MultiApi {
         }
 
         let mut files = vec![];
-            while let Some(response) = file_futures.next().await {
+        while let Some(response) = file_futures.next().await {
             if let Ok(response) = response {
                 let response = response.json::<FileResponse>().await?;
                 files.extend(response.items);
@@ -150,8 +171,8 @@ impl MultiApi {
         files: &[DataFile],
         project: &Project,
         output_dir: impl AsRef<Path>,
+        verify_etag: bool
     ) -> Result<(), failure::Error> {
-
         if files.is_empty() {
             bail!("Selected 0 files to download");
         }
@@ -167,41 +188,44 @@ impl MultiApi {
         let index = AtomicUsize::new(1);
         let time_before = Instant::now();
         let pb = ProgressBar::new(total_size as u64);
-        pb.set_style(indicatif::ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-            .progress_chars("#>-"));
+        pb.set_style(
+            indicatif::ProgressStyle::default_bar()
+                .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+                .progress_chars("#>-")
+        );
 
-        let errors: Vec<Result<(), failure::Error>> = files.par_iter()
+        let errors: Vec<failure::Error> = files
+            .par_iter()
             .map(|file| {
-
                 let index = index.fetch_add(1, Ordering::SeqCst);
-                pb.println(
-                    &format!(
-                        "{} {} : {}",
-                        style(&format!("[{}/{}]", index, num_files)).bold().dim(),
-                        &file.name,
-                        convert(file.size as f64)
-                    )
-                );
+                pb.println(&format!(
+                    "{} {:>12} {}",
+                    style(&format!("[{}/{}]", index, num_files)).bold().dim(),
+                    convert(file.size as f64),
+                    &file.name,
+                ));
 
                 let client = reqwest::blocking::Client::new();
                 let mut resp = client
                     .get(&format!("{}/files/{}/content", BASESPACE_URL, file.id))
                     .header("x-access-token", token)
                     .send()?;
-                
                 let output = output_dir.join(&file.name);
-                let mut writer = BufWriter::new(File::create(&output)?);
 
-                loop {
-                    let mut buffer = vec![0; 1024];
-                    let bcount = resp.read(&mut buffer[..]).unwrap();
-                    pb.inc(bcount as u64);
-                    buffer.truncate(bcount);
-                    if !buffer.is_empty() {
-                        writer.write_all(&buffer)?;
-                    } else {
-                        break;
+                // Need separate scope since we need to close
+                // the file before calculating the etag.
+                {
+                    let mut writer = BufWriter::new(File::create(&output)?);
+                    loop {
+                        let mut buffer = vec![0; 1024];
+                        let bcount = resp.read(&mut buffer[..]).unwrap();
+                        pb.inc(bcount as u64);
+                        buffer.truncate(bcount);
+                        if !buffer.is_empty() {
+                            writer.write_all(&buffer).unwrap();
+                        } else {
+                            break;
+                        }
                     }
                 }
 
@@ -209,9 +233,15 @@ impl MultiApi {
                     bail!("{} did not match expected file size.", file.name);
                 }
 
+                if verify_etag {
+                    if !util::verify_s3_etag(&output, &file.e_tag, file.size as u64)? {
+                        bail!("{} did not match expected etag", file.name);
+                    }
+                }
+                
                 Ok(())
             })
-            .filter(|res| res.is_err())
+            .filter_map(|res| res.err())
             .collect();
 
         pb.finish_and_clear();
@@ -227,8 +257,7 @@ impl MultiApi {
                     num_files,
                     convert(speed)
                 );
-            }
-            else {
+            } else {
                 eprintln!(
                     "{} Download {} files at {}/s, but there were {} errors.",
                     style("warning:").bold().yellow(),
@@ -236,6 +265,9 @@ impl MultiApi {
                     convert(speed),
                     errors.len()
                 );
+                for error in errors {
+                    eprintln!("{}", error);
+                }
             }
         }
 

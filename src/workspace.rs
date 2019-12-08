@@ -10,7 +10,7 @@ pub struct Workspace {
 }
 
 impl Workspace {
-    /// Use the config file stored in 
+    /// Use the config file stored in
     /// $HOME/.config/basespace-dl/default.toml
     pub fn new() -> Result<Workspace, failure::Error> {
         let home = dirs::home_dir().expect("Could not locate $HOME.");
@@ -27,17 +27,16 @@ impl Workspace {
         Ok(Workspace { config_file })
     }
 
-    /// Use a different config file, stored in 
+    /// Use a different config file, stored in
     /// $HOME/.config/basespace-dl/{name}.toml
     pub fn with_config(name: &str) -> Result<Workspace, failure::Error> {
-
         if name.contains(".toml") {
             bail!("When providing an alternative config file, do not include the .toml extension");
         }
 
         let home = dirs::home_dir().expect("Could not locate $HOME.");
         let config_dir = home.join(".config/basespace-dl");
-        
+
         if !config_dir.is_dir() {
             fs::create_dir_all(&config_dir)?;
         }

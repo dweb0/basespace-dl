@@ -3,6 +3,8 @@
 * Check etags to ensure file downloaded correctly
 * Automatically get token ID when new token is added
 * Implement "cache" for storing http responses
+* Add ability to fetch run instead of project (on hold, v1pre3/runs/{run}/samples does not seem to be working on basespace's end)
+* Unit tests, especially for s3 etag
 
 # 0.3.0  (2019-12-07)
 
@@ -10,6 +12,7 @@
 * Better error handling in `main.rs`.
 * Better API deserialization using `serde_struct_wrapper`. No longer need to use wrapper structs
 * Added jaro_winkler to show similar projects if queried project does not exist
+* Now uses elastic tabstops to display tab separated output
 
 # 0.2.3  (2019-10-16)
 

@@ -101,5 +101,10 @@ Note: It's a good idea to set the file permissions as readable / writeable by on
 chmod 600 ~/.config/basespace-dl/default.toml
 ```
 
-Now you're ready to go!
+Now you're ready to go! 
 
+Try running a command to see if it works (assuming you have projects in your account).
+
+```bash
+basespace-dl ALL
+```
