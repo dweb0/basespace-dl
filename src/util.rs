@@ -138,7 +138,6 @@ pub fn s3_etag(
     file_size: usize,
     part_size: usize,
 ) -> Result<String, failure::Error> {
-
     if file_size <= part_size {
         let mut buffer = vec![0; file_size];
         rdr.read_exact(&mut buffer[..]).unwrap();
@@ -170,13 +169,13 @@ pub fn s3_etag(
         Ok(format!("{:?}-{}", md5::compute(digests.as_slice()), parts))
     }
 }
- 
+
 /// Calculate the s3 etag from path, and compare it with
 /// the expected etag.
 ///
 /// The advantage of this function is that we don't need to know
 /// the etag part size (if we already know the file size and known etag).
-/// 
+///
 /// TODO: part size calculation is not working. Do not use this function
 pub fn verify_s3_etag(
     mut rdr: impl Read,
@@ -201,7 +200,7 @@ pub fn verify_s3_etag(
     // Assumes AWS part sizes are a factor of one megabyte
     static ONE_MEGABYTE: f64 = 1024.0 * 1024.0;
 
-    // TODO: does not work 100% of the time. 
+    // TODO: does not work 100% of the time.
     let x = file_size as f64 / num_parts as f64;
     let y = x % (ONE_MEGABYTE);
     let part_size = (x - y + (ONE_MEGABYTE)) as usize;
