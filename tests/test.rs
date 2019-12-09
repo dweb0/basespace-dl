@@ -5,8 +5,8 @@
 
 //     // I have uploaded this file to amazon to get
 //     // the expected etag
-//     let part_size = 1024 * 1024 * 8;
-//     let file_size = 1024 * 1024 * 26;
+//     let part_size = 1024 * 1024 * 25;
+//     let file_size = 27_262_976;
 //     let artifical_file = vec![b'b'; file_size];
 //     let expected_etag = "f6df70255a555bf8c077e5c95f97c1a0-2";
 
