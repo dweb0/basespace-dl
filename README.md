@@ -1,6 +1,6 @@
 # basespace-dl
 
-[![Build Status](https://travis-ci.com/dweb0/basespace-dl.svg?token=EQz1tk6xqYMBC8vjUmyv&branch=master)](https://travis-ci.com/dweb0/basespace-dl)
+[![Build Status](https://travis-ci.org/dweb0/basespace-dl.svg?branch=master)](https://travis-ci.org/dweb0/basespace-dl)
 [![Build status](https://ci.appveyor.com/api/projects/status/c0yglngi1lgc2sox?svg=true)](https://ci.appveyor.com/project/dweb0/basespace-dl)
 ![GitHub release](https://img.shields.io/github/release/dweb0/basespace-dl)
 
