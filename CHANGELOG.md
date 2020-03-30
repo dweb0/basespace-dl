@@ -6,6 +6,10 @@
 * Add etag verification to ensure file downloaded correctly
 * Unit tests, especially for s3 etag
 
+# 0.3.1  (2020-03-30)
+
+* Because Illumina strips trailing whitespace in the name field of `v1pre3/users/current/projects`, but not in the ExperimentName field of `v1pre3/projects/${id_of_unindexed_reads_project}/samples`, added an extra check to work around this.
+
 # 0.3.0  (2019-12-07)
 
 * Complete rewrite with async/await!

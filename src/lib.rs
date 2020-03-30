@@ -96,7 +96,9 @@ impl MultiApi {
                 .items
                 .iter()
                 .filter(|x| match &x.experiment_name {
-                    Some(experiment_name) => experiment_name == &project.name,
+                    Some(experiment_name) => {
+                        experiment_name == &project.name || experiment_name.trim() == &project.name
+                    }
                     None => false,
                 })
                 .collect();
