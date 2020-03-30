@@ -15,7 +15,7 @@ use failure::bail;
 use futures::prelude::*;
 use futures::stream::futures_unordered::FuturesUnordered;
 use indicatif::ProgressBar;
-use log::info;
+use log::{info, warn};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs;
@@ -97,7 +97,17 @@ impl MultiApi {
                 .iter()
                 .filter(|x| match &x.experiment_name {
                     Some(experiment_name) => {
-                        experiment_name == &project.name || experiment_name.trim() == &project.name
+                        if experiment_name == &project.name {
+                            true
+                        } else if experiment_name.trim() == &project.name {
+                            warn!(
+                                "Found Unindexed Reads for {} after removing trailing whitespace.",
+                                project.name
+                            );
+                            true
+                        } else {
+                            false
+                        }
                     }
                     None => false,
                 })
