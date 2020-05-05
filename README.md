@@ -54,13 +54,26 @@ For some more advanced examples of what you can do, check out the [cookbook](coo
 
 ## Installation
 
-Via [cargo](https://www.rust-lang.org/tools/install) (Recommended, always up to date)
+Using macOS Homebrew or Linuxbrew
+
+```
+brew install dweb0/all/basespace-dl
+```
+
+To upgrade to the latest version
+
+```
+brew update
+brew upgrade basespace-dl
+```
+
+Using cargo (for rust developers)
 
 ```
 cargo install --git https://github.com/dweb0/basespace-dl
 ```
 
-**[Pre-built binaries for Mac, Windows, and Linux here.](https://github.com/dweb0/basespace-dl/releases)**
+Or you can download a pre-built binary for Mac, Windows, or Linux on the [releases page](https://github.com/dweb0/basespace-dl/releases).
 
 ## Getting started
 
