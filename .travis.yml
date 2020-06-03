@@ -27,9 +27,14 @@ matrix:
     - env: TARGET=x86_64-apple-darwin
       os: osx
 
+addons:
+  apt:
+    packages:
+      - pkg-config
+      - libssl-dev
+
 before_install:
   - set -e
-  - sudo apt-get -y install libssl-dev
   - rustup self update
 
 install:
