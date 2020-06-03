@@ -36,7 +36,7 @@ impl MultiApi {
     pub fn new(accounts: HashMap<String, String>) -> MultiApi {
         MultiApi { accounts }
     }
-
+    
     pub async fn get_projects(&self) -> Result<Vec<Project>, failure::Error> {
         let client = reqwest::Client::new();
         let mut futures = FuturesUnordered::new();

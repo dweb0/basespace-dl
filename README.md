@@ -14,7 +14,7 @@ Download files from projects across multiple basespace accounts.
 
 ## Demo
 
-![Demo](screencast.svg)
+![Demo](docs/screencast.svg)
 
 > Demo data from Basespace's "Public Data"
 
@@ -50,7 +50,7 @@ List files from a specific project
 basespace-dl project17890 -F
 ```
 
-For some more advanced examples of what you can do, check out the [cookbook](cookbook.md).
+For some more advanced examples of what you can do, check out the [cookbook](docs/cookbook.md).
 
 ## Installation
 

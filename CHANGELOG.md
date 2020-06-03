@@ -9,6 +9,7 @@
 # 0.4.0  (2020-05-20)
 
 * Separated logic between getting samples and files, and separated the Undetermined file logic into a new function called `get_undetermined_sample`.
+* Updated all crates to latest version (lot of the current async / await dependencies were still in alpha).
 
 # 0.3.1  (2020-03-30)
 
