@@ -66,10 +66,73 @@ impl MultiApi {
         Ok(projects)
     }
 
+    pub async fn get_undetermined_sample(
+        &self,
+        project: &Project,
+        unindexed_reads: &Project,
+    ) -> Result<Sample, failure::Error> {
+        let samples = self.get_samples(unindexed_reads).await?;
+        let mut undetermined_samples: Vec<_> = samples
+            .iter()
+            .filter(|x| match &x.experiment_name {
+                Some(experiment_name) => {
+                    if experiment_name == &project.name {
+                        true
+                    } else if experiment_name.trim() == project.name {
+                        warn!(
+                            "Found Unindexed Reads for {} after removing trailing whitespace.",
+                            project.name
+                        );
+                        true
+                    } else {
+                        false
+                    }
+                }
+                None => false,
+            })
+            .collect();
+
+        let undetermined_sample = if undetermined_samples.is_empty() {
+            bail!(
+                "Could not find Undetermined sample for project {}",
+                project.name
+            );
+        } else if undetermined_samples.len() > 1 {
+            util::resolve_duplicate_unindexed_reads(undetermined_samples)
+        } else {
+            undetermined_samples.remove(0)
+        };
+
+        Ok(undetermined_sample.to_owned())
+    }
+
+    pub async fn get_samples(&self, project: &Project) -> Result<Vec<Sample>, failure::Error> {
+        let token = self
+            .accounts
+            .get(&project.user_fetched_by_id)
+            .expect("Could not get token from accounts");
+
+        let client = reqwest::Client::new();
+
+        let samples = client
+            .get(&format!(
+                "{}/projects/{}/samples?limit={}",
+                BASESPACE_URL, project.id, RESPONSE_LIMIT
+            ))
+            .header("x-access-token", token)
+            .send()
+            .await?
+            .json::<SampleResponse>()
+            .await?
+            .items;
+
+        Ok(samples)
+    }
+
     pub async fn get_files(
         &self,
         project: &Project,
-        unindexed_reads: Option<&Project>,
+        samples: &[Sample],
     ) -> Result<Vec<DataFile>, failure::Error> {
         let token = self
             .accounts
@@ -79,86 +142,7 @@ impl MultiApi {
         let client = reqwest::Client::new();
         let mut file_futures = FuturesUnordered::new();
 
-        if let Some(unindexed_reads) = unindexed_reads {
-            info!("Fetching undetermined files...");
-            let resp = client
-                .get(&format!(
-                    "{}/projects/{}/samples?limit={}",
-                    BASESPACE_URL, unindexed_reads.id, RESPONSE_LIMIT
-                ))
-                .header("x-access-token", token)
-                .send()
-                .await?
-                .json::<SampleResponse>()
-                .await?;
-
-            let mut undetermined_samples: Vec<_> = resp
-                .items
-                .iter()
-                .filter(|x| match &x.experiment_name {
-                    Some(experiment_name) => {
-                        if experiment_name == &project.name {
-                            true
-                        } else if experiment_name.trim() == &project.name {
-                            warn!(
-                                "Found Unindexed Reads for {} after removing trailing whitespace.",
-                                project.name
-                            );
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    None => false,
-                })
-                .collect();
-
-            let undetermined_sample = if undetermined_samples.is_empty() {
-                bail!(
-                    "Could not find Undetermined sample for project {}",
-                    project.name
-                );
-            } else if undetermined_samples.len() > 1 {
-                util::resolve_duplicate_unindexed_reads(undetermined_samples)
-            } else {
-                undetermined_samples.remove(0)
-            };
-
-            let resp = client
-                .get(&format!(
-                    "{}/samples/{}/files",
-                    BASESPACE_URL, undetermined_sample.id
-                ))
-                .header("x-access-token", token)
-                .send();
-            file_futures.push(resp);
-        }
-
-        let resp = client
-            .get(&format!(
-                "{}/projects/{}/samples?limit={}",
-                BASESPACE_URL, project.id, RESPONSE_LIMIT
-            ))
-            .header("x-access-token", token)
-            .send()
-            .await?
-            .json::<SampleResponse>()
-            .await?;
-
-        let unfinished_samples: Vec<_> = resp
-            .items
-            .iter()
-            .filter(|s| s.status != "Complete")
-            .collect();
-
-        if !unfinished_samples.is_empty() {
-            bail!(
-                "Project not finished yet. {} samples still processing.",
-                unfinished_samples.len()
-            );
-        }
-
-        for sample in resp.items {
+        for sample in samples {
             let resp = client
                 .get(&format!("{}/samples/{}/files", BASESPACE_URL, sample.id))
                 .header("x-access-token", token)

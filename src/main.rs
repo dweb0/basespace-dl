@@ -4,6 +4,7 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use failure::bail;
 use failure::ResultExt;
+use futures::future;
 use log::info;
 use regex::Regex;
 use std::collections::HashSet;
@@ -127,24 +128,45 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
         matching_projects.remove(0)
     };
 
-    let unindexed_reads = if matches.is_present("undetermined") {
+    let samples = if matches.is_present("undetermined") {
         if project.user_fetched_by_id != project.user_owned_by.id {
             bail!("Must be the owner of a project to access its \"Unindexed Reads\".");
         }
         let unindexed_reads = projects.iter().find(|x| {
             x.name == "Unindexed Reads" && x.user_fetched_by_id == project.user_fetched_by_id
         });
-        if unindexed_reads.is_none() {
-            bail!("Could not find Unindexed Reads in basespace account.")
-        }
-        unindexed_reads
+
+        let unindexed_reads = match unindexed_reads {
+            Some(unindexed_reads) => unindexed_reads,
+            None => bail!("Could not find Unindexed Reads in basespace account."),
+        };
+
+        let undetermined_sample = multi.get_undetermined_sample(project, unindexed_reads);
+        let samples = multi.get_samples(&project);
+
+        // Fetch main samples + the undetermined sample concurrently
+        let (samples, undetermined_sample) = future::join(samples, undetermined_sample).await;
+        let mut samples = samples?;
+
+        let undetermined_sample = undetermined_sample?;
+        samples.push(undetermined_sample);
+        samples
     } else {
-        None
+        multi.get_samples(project).await?
     };
+
+    let unfinished_samples: Vec<_> = samples.iter().filter(|s| s.status != "Complete").collect();
+
+    if !unfinished_samples.is_empty() {
+        bail!(
+            "Project not finished yet. {} samples still processing.",
+            unfinished_samples.len()
+        );
+    }
 
     info!("Fetching files...");
 
-    let mut files = multi.get_files(project, unindexed_reads).await?;
+    let mut files = multi.get_files(project, &samples).await?;
     if let Some(pattern) = matches.value_of("pattern") {
         let re = Regex::new(pattern).with_context(|e| format!("Invalid regex pattern. {}", e))?;
         files = files

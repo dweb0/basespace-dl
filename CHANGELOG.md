@@ -6,6 +6,10 @@
 * Add etag verification to ensure file downloaded correctly
 * Unit tests, especially for s3 etag
 
+# 0.4.0  (2020-05-20)
+
+* Separated logic between getting samples and files, and separated the Undetermined file logic into a new function called `get_undetermined_sample`.
+
 # 0.3.1  (2020-03-30)
 
 * Because Illumina strips trailing whitespace in the name field of `v1pre3/users/current/projects`, but not in the ExperimentName field of `v1pre3/projects/${id_of_unindexed_reads_project}/samples`, added an extra check to work around this.
@@ -18,7 +22,6 @@
 * Added jaro_winkler to show similar projects if queried project does not exist
 * Now uses elastic tabstops to display tab separated output
 * Better file output formatting with progress bar
-
 
 # 0.2.3  (2019-10-16)
 

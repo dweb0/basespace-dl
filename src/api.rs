@@ -96,7 +96,7 @@ pub struct SampleResponse {
     pub items: Vec<Sample>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct Sample {
     pub id: String,
