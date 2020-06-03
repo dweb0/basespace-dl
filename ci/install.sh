@@ -30,7 +30,7 @@ main() {
             ;;
     esac
 
-    apt-get -y install libssl-dev
+    sudo apt-get -y install libssl-dev
 
     # This fetches latest stable release
     local tag=$(git ls-remote --tags --refs --exit-code https://github.com/japaric/cross \
