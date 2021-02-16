@@ -5,7 +5,7 @@ use console::style;
 use failure::bail;
 use failure::ResultExt;
 use futures::future;
-use log::info;
+use log::{info, warn};
 use regex::Regex;
 use std::collections::HashSet;
 use std::fs::File;
@@ -56,6 +56,11 @@ fn build_app() -> App<'static, 'static> {
                 .short("C")
                 .takes_value(true)
                 .help("Alternate config. Stored in $HOME/.config/basespace-dl/{name}.toml"),
+            Arg::with_name("skip-completion-check")
+                .long("skip-completion-check")
+                .required(false)
+                .takes_value(false)
+                .help("Skip the requirement that all samples in a project be finished processing"),
             Arg::with_name("verbose")
                 .long("verbose")
                 .short("v")
@@ -71,6 +76,8 @@ async fn main() {
 
     if matches.is_present("verbose") {
         std::env::set_var("RUST_LOG", "info");
+    } else {
+        std::env::set_var("RUST_LOG", "warn");
     }
     env_logger::init();
 
@@ -155,15 +162,24 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
         multi.get_samples(project).await?
     };
 
-    let unfinished_samples: Vec<_> = samples.iter().filter(|s| s.status != "Complete").collect();
+    let (samples, unfinished_samples): (Vec<_>, Vec<_>) =
+        samples.into_iter().partition(|s| s.status == "Complete");
 
     if !unfinished_samples.is_empty() {
-        bail!(
-            "Project not finished yet. {} samples still processing.",
-            unfinished_samples.len()
-        );
+        if matches.is_present("skip-completion-check") {
+            warn!(
+                "Warning: {} samples still processing. Downloading anyway.",
+                unfinished_samples.len()
+            );
+        } else {
+            bail!(
+                "Project not finished yet. {} samples still processing.",
+                unfinished_samples.len()
+            );
+        }
     }
 
+    info!("Found {} completed samples", samples.len());
     info!("Fetching files...");
 
     let mut files = multi.get_files(project, &samples).await?;

@@ -6,6 +6,11 @@
 * Add etag verification to ensure file downloaded correctly
 * Unit tests, especially for s3 etag
 
+# 0.4.1  (2021-02-16)
+
+* Added `skip-completion-check` flag so user can download files even if samples are still processing
+* Set RUST_LOG to print warning messages by default
+
 # 0.4.0  (2020-05-20)
 
 * Separated logic between getting samples and files, and separated the Undetermined file logic into a new function called `get_undetermined_sample`.
