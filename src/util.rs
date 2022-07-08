@@ -1,7 +1,7 @@
 use super::api::{Project, Sample};
 use console::style;
 use failure::bail;
-use number_prefix::{NumberPrefix, PrefixNames, Prefixed, Standalone};
+use number_prefix::NumberPrefix;
 use std::io::{Read, Write};
 use tabwriter::TabWriter;
 
@@ -237,8 +237,8 @@ pub fn verify_s3_etag(
 /// Trying to match format of unix's "ls -lh" command
 pub fn convert_bytes(num: f64) -> String {
     match NumberPrefix::decimal(num) {
-        Standalone(bytes) => bytes.to_string(),
-        Prefixed(prefix, n) => {
+        NumberPrefix::Standalone(bytes) => bytes.to_string(),
+        NumberPrefix::Prefixed(prefix, n) => {
             let symbol = prefix.symbol();
             let number = if n >= 10.0 {
                 format!("{:.0}", n)
