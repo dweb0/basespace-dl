@@ -28,8 +28,7 @@ fn build_app() -> App<'static, 'static> {
                 .long("list-files")
                 .short("F")
                 .takes_value(false)
-                .multiple(true)
-                .help("List all files for a given project. Use -FF to also print file metadata."),
+                .help("List all files for a given project. Use -l to also print file metadata."),
             Arg::with_name("pattern")
                 .long("pattern")
                 .short("p")
@@ -61,6 +60,11 @@ fn build_app() -> App<'static, 'static> {
                 .required(false)
                 .takes_value(false)
                 .help("Skip the requirement that all samples in a project be finished processing"),
+            Arg::with_name("long-format")
+                .long("long-format")
+                .short("l")
+                .takes_value(false)
+                .help("Long format. Prints file size if listing files or more project info if listing projects"),
             Arg::with_name("verbose")
                 .long("verbose")
                 .short("v")
@@ -112,8 +116,30 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
     let projects = multi.get_projects().await?;
 
     if query == "ALL" {
-        for project in projects {
-            println!("{}", project.name);
+        if matches.is_present("long-format") {
+            
+            // Only print YYYY-MM-DD and not timestamp
+            // Timestamp should ALWAYS include this
+            let date_re = Regex::new(r"^\d{4,4}-\d{2,2}-\d{2,2}").unwrap();
+
+            for project in projects {
+                let date = match date_re.find(&project.date_created) {
+                    Some(mat) => mat.as_str(),
+                    None => ""
+                };
+                
+                println!(
+                    "{},{},{},{}",
+                    project.name,
+                    project.user_owned_by.id,
+                    project.user_owned_by.name,
+                    date,
+                );
+            }
+        } else {
+            for project in projects {
+                println!("{}", project.name);
+            }
         }
         std::process::exit(0);
     }
@@ -149,7 +175,7 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
         };
 
         let undetermined_sample = multi.get_undetermined_sample(project, unindexed_reads);
-        let samples = multi.get_samples(&project);
+        let samples = multi.get_samples(project);
 
         // Fetch main samples + the undetermined sample concurrently
         let (samples, undetermined_sample) = future::join(samples, undetermined_sample).await;
@@ -209,7 +235,7 @@ async fn real_main(matches: ArgMatches<'static>) -> Result<(), failure::Error> {
         let stdout = std::io::stdout();
         let mut stdout = stdout.lock();
 
-        if matches.occurrences_of("list-files") > 1 {
+        if matches.occurrences_of("list-files") > 1 || matches.is_present("long-format") {
             let mut writer = TabWriter::new(&mut stdout);
             for file in files {
                 writeln!(

@@ -6,6 +6,12 @@
 * Add etag verification to ensure file downloaded correctly
 * Unit tests, especially for s3 etag
 
+# 0.5.0  (2022-07-08)
+
+* Updated dependencies with `cargo upgrade`
+* Added `--long-format` flag, which when used with `basespace ALL`, prints additional information
+about the project: date created and user owned by.
+
 # 0.4.1  (2021-02-16)
 
 * Added `skip-completion-check` flag so user can download files even if samples are still processing
